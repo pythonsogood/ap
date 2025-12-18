@@ -1,0 +1,1 @@
+module github.com/SultanYakupov/Assignment1
