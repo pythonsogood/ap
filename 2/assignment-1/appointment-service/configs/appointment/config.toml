@@ -1,5 +1,5 @@
 [services.doctor]
-url = "http://localhost:8081"
+url = "http://doctor-service:8081"
 timeout = 15
 
 [server]
@@ -9,4 +9,4 @@ port = 8082
 type = "sqlite3" # supported: sqlite3
 
 [database.sqlite3]
-source = "./appointment.db"
+source = "./db/appointment.db"

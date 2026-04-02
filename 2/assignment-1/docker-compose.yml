@@ -1,0 +1,29 @@
+services:
+  doctor-service:
+    image: doctor-service
+    build:
+      context: ./doctor-service
+    environment:
+      CONFIG_FILE: config.toml
+    volumes:
+      - doctor-data:/app/db
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+  appointment-service:
+    image: appointment-service
+    build:
+      context: ./appointment-service
+    environment:
+      CONFIG_FILE: config.toml
+    volumes:
+      - appointment-data:/app/db
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+
+volumes:
+  doctor-data:
+    driver: local
+  appointment-data:
+    driver: local
