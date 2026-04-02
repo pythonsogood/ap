@@ -231,7 +231,7 @@ curl -X POST http://localhost:8082/appointments \
 	-H "Content-Type: application/json" \
 	-d '{
 		"title": "Initial cardiac consultation",
-		"description": ""Patient referred for palpitations and shortness of breath",
+		"description": "Patient referred for palpitations and shortness of breath",
 		"doctor_id": "<doctor-id-from-above>"
 	}'
 ```
