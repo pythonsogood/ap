@@ -16,7 +16,7 @@ type SQLiteDoctorRepository struct {
 	db *sql.DB
 }
 
-func NewSQLiteDoctorRepository(db *sql.DB) *SQLiteDoctorRepository {
+func NewSQLiteDoctorRepository(db *sql.DB) DoctorRepository {
 	return &SQLiteDoctorRepository{
 		db: db,
 	}
@@ -31,17 +31,21 @@ func (r *SQLiteDoctorRepository) FindByID(ID string) (*model.Doctor, error) {
 
 	defer statement.Close()
 
-	doctor := &model.Doctor{}
+	var id, full_name, specialization, email string
 
-	if err := statement.QueryRow(ID).Scan(&doctor); err != nil {
+	if err := statement.QueryRow(ID).Scan(&id, &full_name, &specialization, &email); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
-	return doctor, nil
+	return model.NewDoctor(id, full_name, specialization, email), nil
 }
 
 func (r *SQLiteDoctorRepository) All() ([]*model.Doctor, error) {
-	rows, err := r.db.Query("SELECT ID, full_name, specialization, email FROM doctors")
+	rows, err := r.db.Query("SELECT id, full_name, specialization, email FROM doctors")
 
 	if err != nil {
 		return nil, err
@@ -49,14 +53,14 @@ func (r *SQLiteDoctorRepository) All() ([]*model.Doctor, error) {
 
 	defer rows.Close()
 
-	var doctors []*model.Doctor
+	doctors := make([]*model.Doctor, 0)
 
 	for rows.Next() {
-		doctor := &model.Doctor{}
+		var id, full_name, specialization, email string
 
-		err := rows.Scan(&doctor)
+		if err := rows.Scan(&id, &full_name, &specialization, &email); err == nil {
+			doctor := model.NewDoctor(id, full_name, specialization, email)
 
-		if err == nil {
 			doctors = append(doctors, doctor)
 		}
 	}

@@ -1,3 +1,3 @@
 module github.com/pythonsogood/ap-assignment1/appointment
 
-go 1.25.5
+go 1.26.0

@@ -46,7 +46,7 @@ func NewDefaultConfig() (*Config, error) {
 	config_path := os.Getenv("CONFIG_FILE")
 
 	if len(config_path) == 0 {
-		config_path = "../../../configs/doctor/config.toml"
+		config_path = "./configs/doctor/config.toml"
 	}
 
 	return ParseConfig(config_path)

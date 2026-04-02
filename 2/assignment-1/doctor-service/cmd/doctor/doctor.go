@@ -29,7 +29,7 @@ func main() {
 
 	router := gin.Default()
 
-	doctor_db, err := database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
+	doctor_db, err := database.NewSQLiteDB(conf.Database.Sqlite3.Source)
 
 	if err != nil {
 		panic(err.Error())
@@ -37,7 +37,7 @@ func main() {
 
 	doctor_repo := repository.NewSQLiteDoctorRepository(doctor_db)
 	doctor_service := service.NewDoctorService(doctor_repo)
-	doctor_handler := handler.NewDoctorHandler(&doctor_service)
+	doctor_handler := handler.NewDoctorHandler(doctor_service)
 
 	route.SetupDoctorRoutes(router, doctor_handler)
 

@@ -17,8 +17,10 @@ type doctorHandlerImpl struct {
 	service service.DoctorService
 }
 
-func NewDoctorHandler(service *service.DoctorService) DoctorHandler {
-	return &doctorHandlerImpl{}
+func NewDoctorHandler(service service.DoctorService) DoctorHandler {
+	return &doctorHandlerImpl{
+		service: service,
+	}
 }
 
 func (h *doctorHandlerImpl) GETByID(c *gin.Context) {
@@ -27,8 +29,12 @@ func (h *doctorHandlerImpl) GETByID(c *gin.Context) {
 	doctor, err := h.service.GetDoctor(id)
 
 	if err != nil {
-		c.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
+	if doctor == nil {
+		c.Status(http.StatusNotFound)
 		return
 	}
 
@@ -39,7 +45,7 @@ func (h *doctorHandlerImpl) GETList(c *gin.Context) {
 	doctors, err := h.service.GetAllDoctors()
 
 	if err != nil {
-		c.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -55,14 +61,15 @@ type DoctorPOSTBind struct {
 func (h *doctorHandlerImpl) POST(c *gin.Context) {
 	var doctor_bind DoctorPOSTBind
 
-	if err := c.BindJSON(&doctor_bind); err != nil {
+	if err := c.ShouldBindJSON(&doctor_bind); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	doctor, err := h.service.CreateDoctor(doctor_bind.FullName, doctor_bind.Specialization, doctor_bind.Email)
 
 	if err != nil {
-		c.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
