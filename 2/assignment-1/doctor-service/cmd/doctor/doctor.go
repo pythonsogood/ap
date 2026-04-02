@@ -1,9 +1,10 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pythonsogood/ap-assignment1/doctor/cmd/doctor/config"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/database"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
@@ -12,9 +13,23 @@ import (
 )
 
 func main() {
+	conf, err := config.NewDefaultConfig()
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	switch conf.Database.Type {
+	case config.DatabaseTypeSQLite:
+	default:
+		panic("Unsupported database type!")
+	}
+
+	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
+
 	router := gin.Default()
 
-	doctor_db, err := database.SQLiteConnectDB("doctor-service.db")
+	doctor_db, err := database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
 
 	if err != nil {
 		panic(err.Error())
@@ -26,13 +41,7 @@ func main() {
 
 	route.SetupDoctorRoutes(router, doctor_handler)
 
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello, world!",
-		})
-	})
-
-	if err := router.Run(":8081"); err != nil {
+	if err := router.Run(server_addr); err != nil {
 		panic(err.Error())
 	}
 }
