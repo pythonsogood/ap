@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,7 +30,13 @@ func (h *doctorHandlerImpl) GETByID(c *gin.Context) {
 	doctor, err := h.service.GetDoctor(id)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		status_code := http.StatusInternalServerError
+
+		if err == sql.ErrNoRows {
+			status_code = http.StatusNotFound
+		}
+
+		c.JSON(status_code, gin.H{"error": err.Error()})
 		return
 	}
 

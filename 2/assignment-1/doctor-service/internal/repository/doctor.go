@@ -34,14 +34,15 @@ func (r *SQLiteDoctorRepository) FindByID(ID string) (*model.Doctor, error) {
 	var id, full_name, specialization, email string
 
 	if err := statement.QueryRow(ID).Scan(&id, &full_name, &specialization, &email); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-
 		return nil, err
 	}
 
-	return model.NewDoctor(id, full_name, specialization, email), nil
+	return &model.Doctor{
+		ID:             id,
+		FullName:       full_name,
+		Specialization: specialization,
+		Email:          email,
+	}, nil
 }
 
 func (r *SQLiteDoctorRepository) All() ([]*model.Doctor, error) {
@@ -59,7 +60,12 @@ func (r *SQLiteDoctorRepository) All() ([]*model.Doctor, error) {
 		var id, full_name, specialization, email string
 
 		if err := rows.Scan(&id, &full_name, &specialization, &email); err == nil {
-			doctor := model.NewDoctor(id, full_name, specialization, email)
+			doctor := &model.Doctor{
+				ID:             id,
+				FullName:       full_name,
+				Specialization: specialization,
+				Email:          email,
+			}
 
 			doctors = append(doctors, doctor)
 		}

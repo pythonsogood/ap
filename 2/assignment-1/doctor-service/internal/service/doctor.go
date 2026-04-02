@@ -39,12 +39,7 @@ func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string,
 
 	id := uuid.String()
 
-	doctor := &model.Doctor{
-		ID:             id,
-		FullName:       full_name,
-		Specialization: specialization,
-		Email:          email,
-	}
+	doctor := model.NewDoctor(id, full_name, specialization, email)
 
 	if err := s.repo.Insert(doctor); err != nil {
 		return nil, err

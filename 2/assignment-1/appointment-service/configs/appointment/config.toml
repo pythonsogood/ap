@@ -1,0 +1,8 @@
+[server]
+port = 8082
+
+[database]
+type = "sqlite3" # supported: sqlite3
+
+[database.sqlite3]
+source = "./appointment.db"
