@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pythonsogood/ap-assignment1/doctor/database"
-	"github.com/pythonsogood/ap-assignment1/doctor/handler"
-	"github.com/pythonsogood/ap-assignment1/doctor/repository"
-	"github.com/pythonsogood/ap-assignment1/doctor/route"
-	"github.com/pythonsogood/ap-assignment1/doctor/service"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/database"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/route"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 )
 
 func main() {

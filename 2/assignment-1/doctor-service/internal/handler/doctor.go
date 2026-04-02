@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pythonsogood/ap-assignment1/doctor/service"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 )
 
 type DoctorHandler interface {

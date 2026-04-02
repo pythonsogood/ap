@@ -2,7 +2,7 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/pythonsogood/ap-assignment1/doctor/handler"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
 )
 
 func SetupDoctorRoutes(engine *gin.Engine, doctor_handler handler.DoctorHandler) {

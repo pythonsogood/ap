@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/google/uuid"
-	"github.com/pythonsogood/ap-assignment1/doctor/model"
-	"github.com/pythonsogood/ap-assignment1/doctor/repository"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
 )
 
 type DoctorService interface {

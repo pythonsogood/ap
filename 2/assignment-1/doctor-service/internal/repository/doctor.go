@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"github.com/pythonsogood/ap-assignment1/doctor/model"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 )
 
 type DoctorRepository interface {
