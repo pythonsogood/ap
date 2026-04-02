@@ -17,7 +17,7 @@ type doctorServiceConfig struct {
 	Timeout uint   `toml:"timeout"`
 }
 
-type serviceConfig struct {
+type servicesConfig struct {
 	Doctor doctorServiceConfig `toml:"doctor"`
 }
 
@@ -35,7 +35,7 @@ type databaseConfig struct {
 }
 
 type Config struct {
-	Service  serviceConfig  `toml:"services"`
+	Services servicesConfig `toml:"services"`
 	Server   serverConfig   `toml:"server"`
 	Database databaseConfig `toml:"database"`
 }

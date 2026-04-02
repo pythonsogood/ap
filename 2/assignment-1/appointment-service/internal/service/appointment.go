@@ -11,7 +11,7 @@ import (
 type AppointmentService interface {
 	GetAppointment(id string) (*model.Appointment, error)
 	GetAllAppointments() ([]*model.Appointment, error)
-	CreateAppointment(full_name string, specialization string, email string) (*model.Appointment, error)
+	CreateAppointment(title string, description string, doctor_id string) (*model.Appointment, error)
 	UpdateStatus(id string, status model.Status) error
 }
 

@@ -61,7 +61,7 @@ func (h *doctorHandlerImpl) GETList(c *gin.Context) {
 
 type DoctorPOSTBind struct {
 	FullName       string `json:"full_name" binding:"required"`
-	Specialization string `json:"specialization" binding:"required"`
+	Specialization string `json:"specialization" binding:""`
 	Email          string `json:"email" binding:"required,email"`
 }
 

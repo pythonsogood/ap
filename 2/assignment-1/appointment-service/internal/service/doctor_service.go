@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -27,6 +28,8 @@ func (s doctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
 	resp, err := s.HTTPClient.Do(req)
 
 	if err != nil {
+		log.Println("[ERROR] Doctors service is currently unavailable\nError: ", err.Error())
+
 		return false, fmt.Errorf("Doctors service is currently unavailable\nError: %s", err.Error())
 	}
 
