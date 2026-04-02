@@ -48,7 +48,9 @@ func main() {
 		Timeout: 15 * time.Second,
 	}
 
-	appointment_service := service.NewAppointmentService(appointment_repo, conf.Service.Doctor.Url, &http_client)
+	doctor_service := service.NewDoctorService(conf.Service.Doctor.Url, &http_client)
+
+	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
 
 	appointment_handler := handler.NewAppointmentHandler(appointment_service)
 

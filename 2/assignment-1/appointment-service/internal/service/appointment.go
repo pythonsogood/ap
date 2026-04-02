@@ -2,9 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
@@ -16,31 +13,11 @@ type AppointmentService interface {
 	GetAllAppointments() ([]*model.Appointment, error)
 	CreateAppointment(full_name string, specialization string, email string) (*model.Appointment, error)
 	UpdateStatus(id string, status model.Status) error
-	isValidDoctorId(doctor_id string) (bool, error)
 }
 
 type appointmentServiceImpl struct {
-	repo                   repository.AppointmentRepository
-	doctor_service_address string
-	HTTPClient             *http.Client
-}
-
-func (s appointmentServiceImpl) isValidDoctorId(doctor_id string) (bool, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/doctors/%s", s.doctor_service_address, doctor_id), nil)
-
-	if err != nil {
-		return false, err
-	}
-
-	req.Header.Set("X-Service-Name", "appointment-service")
-
-	resp, err := s.HTTPClient.Do(req)
-
-	if err != nil {
-		return false, fmt.Errorf("Doctors service is currently unavailable\nError: %s", err.Error())
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
+	repo           repository.AppointmentRepository
+	doctor_service DoctorService
 }
 
 func (s appointmentServiceImpl) GetAppointment(id string) (*model.Appointment, error) {
@@ -52,7 +29,7 @@ func (s appointmentServiceImpl) GetAllAppointments() ([]*model.Appointment, erro
 }
 
 func (s appointmentServiceImpl) CreateAppointment(title string, description string, doctor_id string) (*model.Appointment, error) {
-	valid_doctor_id, err := s.isValidDoctorId(doctor_id)
+	valid_doctor_id, err := s.doctor_service.IsValidDoctorId(doctor_id)
 
 	if err != nil {
 		return nil, err
@@ -86,6 +63,16 @@ func (s appointmentServiceImpl) UpdateStatus(id string, status model.Status) err
 		return err
 	}
 
+	valid_doctor_id, err := s.doctor_service.IsValidDoctorId(appointment.DoctorID)
+
+	if err != nil {
+		return err
+	}
+
+	if !valid_doctor_id {
+		return errors.New("Invalid doctor id")
+	}
+
 	if appointment.Status == model.StatusDone {
 		return errors.New("Done appointments cannot be updated")
 	}
@@ -93,16 +80,9 @@ func (s appointmentServiceImpl) UpdateStatus(id string, status model.Status) err
 	return s.repo.UpdateStatus(id, status)
 }
 
-func NewAppointmentService(repo repository.AppointmentRepository, doctor_service_address string, http_client *http.Client) AppointmentService {
-	if http_client == nil {
-		http_client = &http.Client{
-			Timeout: 15 * time.Second,
-		}
-	}
-
+func NewAppointmentService(repo repository.AppointmentRepository, doctor_service DoctorService) AppointmentService {
 	return &appointmentServiceImpl{
-		repo:                   repo,
-		doctor_service_address: doctor_service_address,
-		HTTPClient:             http_client,
+		repo:           repo,
+		doctor_service: doctor_service,
 	}
 }
