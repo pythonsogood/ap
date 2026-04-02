@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pythonsogood/ap-assignment1/appointment/cmd/appointment/config"
@@ -10,7 +12,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
-	"github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
+	http_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
 )
 
 func main() {
@@ -41,10 +43,16 @@ func main() {
 	}
 
 	appointment_repo := repository.NewSQLiteAppointmentRepository(appointment_db)
-	appointment_service := service.NewAppointmentService(appointment_repo)
+
+	http_client := http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	appointment_service := service.NewAppointmentService(appointment_repo, conf.Service.Doctor.Url, &http_client)
+
 	appointment_handler := handler.NewAppointmentHandler(appointment_service)
 
-	if err := http.SetupAppointmentTransport(router, appointment_handler); err != nil {
+	if err := http_transport.SetupAppointmentTransport(router, appointment_handler); err != nil {
 		panic(err.Error())
 	}
 

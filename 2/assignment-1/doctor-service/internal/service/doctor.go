@@ -16,12 +16,6 @@ type doctorServiceImpl struct {
 	repo repository.DoctorRepository
 }
 
-func NewDoctorService(repo repository.DoctorRepository) DoctorService {
-	return &doctorServiceImpl{
-		repo: repo,
-	}
-}
-
 func (s doctorServiceImpl) GetDoctor(id string) (*model.Doctor, error) {
 	return s.repo.FindByID(id)
 }
@@ -46,4 +40,10 @@ func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string,
 	}
 
 	return doctor, nil
+}
+
+func NewDoctorService(repo repository.DoctorRepository) DoctorService {
+	return &doctorServiceImpl{
+		repo: repo,
+	}
 }

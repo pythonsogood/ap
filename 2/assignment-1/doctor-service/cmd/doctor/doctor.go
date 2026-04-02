@@ -10,7 +10,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
-	"github.com/pythonsogood/ap-assignment1/doctor/internal/transport/http"
+	http_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/http"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 	doctor_service := service.NewDoctorService(doctor_repo)
 	doctor_handler := handler.NewDoctorHandler(doctor_service)
 
-	if err := http.SetupDoctorTransport(router, doctor_handler); err != nil {
+	if err := http_transport.SetupDoctorTransport(router, doctor_handler); err != nil {
 		panic(err.Error())
 	}
 

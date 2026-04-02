@@ -1,3 +1,7 @@
+[services.doctor]
+url = "http://localhost:8081"
+timeout = 15
+
 [server]
 port = 8082
 

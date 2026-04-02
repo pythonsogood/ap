@@ -12,6 +12,15 @@ const (
 	DatabaseTypeSQLite DatabaseType = "sqlite3"
 )
 
+type doctorServiceConfig struct {
+	Url     string `toml:"url"`
+	Timeout uint   `toml:"timeout"`
+}
+
+type serviceConfig struct {
+	Doctor doctorServiceConfig `toml:"doctor"`
+}
+
 type serverConfig struct {
 	Port uint16 `toml:"port"`
 }
@@ -26,6 +35,7 @@ type databaseConfig struct {
 }
 
 type Config struct {
+	Service  serviceConfig  `toml:"services"`
 	Server   serverConfig   `toml:"server"`
 	Database databaseConfig `toml:"database"`
 }
