@@ -13,7 +13,7 @@ const (
 )
 
 type doctorServiceConfig struct {
-	Url     string `toml:"url"`
+	Address string `toml:"address"`
 	Timeout uint   `toml:"timeout"`
 }
 

@@ -1,5 +1,5 @@
 [services.doctor]
-url = "http://doctor-service:8081"
+address = "doctor-service:8081"
 timeout = 15
 
 [server]

@@ -205,7 +205,17 @@ func (h *AppointmentGRPCHandler) CreateAppointment(_ context.Context, in *pb.Cre
 	appointment, err := h.service.CreateAppointment(in.GetTitle(), in.GetDescription(), in.GetDoctorId())
 
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		code := codes.Internal
+
+		if strings.Contains(err.Error(), "Doctors service is currently unavailable") {
+			code = codes.Unavailable
+		}
+
+		if strings.Contains(err.Error(), "Invalid doctor id") {
+			code = codes.FailedPrecondition
+		}
+
+		return nil, status.Error(code, err.Error())
 	}
 
 	appointment_status, ok := pb.AppointmentStatus_value[strings.ToUpper(string(appointment.Status))]
@@ -238,7 +248,21 @@ func (h *AppointmentGRPCHandler) UpdateAppointmentStatus(_ context.Context, in *
 			return nil, status.Errorf(codes.NotFound, "Appointment with id %s not found", id)
 		}
 
-		return nil, status.Error(codes.Internal, err.Error())
+		code := codes.Internal
+
+		if strings.Contains(err.Error(), "Done appointments cannot be updated") {
+			code = codes.InvalidArgument
+		}
+
+		if strings.Contains(err.Error(), "Doctors service is currently unavailable") {
+			code = codes.Unavailable
+		}
+
+		if strings.Contains(err.Error(), "Invalid doctor id") {
+			code = codes.FailedPrecondition
+		}
+
+		return nil, status.Error(code, err.Error())
 	}
 
 	return &pb.UpdateAppointmentStatusResponse{}, nil

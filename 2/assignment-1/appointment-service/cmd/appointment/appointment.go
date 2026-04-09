@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -85,11 +84,12 @@ func main() {
 
 	appointment_repo := repository.NewSQLiteAppointmentRepository(appointment_db)
 
-	http_client := http.Client{
-		Timeout: 15 * time.Second,
-	}
+	// http_client := http.Client{
+	// 	Timeout: time.Duration(conf.Services.Doctor.Timeout*time.Second),
+	// }
 
-	doctor_service := service.NewDoctorService(conf.Services.Doctor.Url, &http_client)
+	// doctor_service := service.NewHTTPDoctorService(conf.Services.Doctor.Address, &http_client)
+	doctor_service := service.NewGRPCDoctorService(conf.Services.Doctor.Address, time.Duration(conf.Services.Doctor.Timeout)*time.Second)
 
 	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
@@ -147,7 +148,13 @@ func (h *DoctorGRPCHandler) CreateDoctor(_ context.Context, in *pb.CreateDoctorR
 	doctor, err := h.service.CreateDoctor(in.GetFullName(), in.GetSpecialization(), in.GetEmail())
 
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		code := codes.Internal
+
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: doctors.email") {
+			code = codes.AlreadyExists
+		}
+
+		return nil, status.Error(code, err.Error())
 	}
 
 	return &pb.DoctorResponse{
