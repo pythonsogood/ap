@@ -15,7 +15,7 @@ service AppointmentService {
 	// Creates appointment
 	rpc CreateAppointment(CreateAppointmentRequest) returns (AppointmentResponse);
 	// Updates appointment status
-	rpc UpdateAppointmentStatus(UpdateAppointmentStatusRequest) returns (AppointmentResponse);
+	rpc UpdateAppointmentStatus(UpdateAppointmentStatusRequest) returns (UpdateAppointmentStatusResponse);
 }
 
 enum AppointmentStatus {
@@ -54,3 +54,5 @@ message AppointmentResponse {
 message GetAppointmentsResponse {
 	repeated AppointmentResponse appointments = 1;
 }
+
+message UpdateAppointmentStatusResponse {}

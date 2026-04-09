@@ -1,13 +1,20 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	pb "github.com/pythonsogood/ap-assignment1/proto"
 )
 
 type AppointmentHTTPHandler interface {
@@ -119,4 +126,120 @@ func (h *appointmentHTTPHandlerImpl) StatusValidator(fl validator.FieldLevel) bo
 	}
 
 	return status == model.StatusDone || status == model.StatusInProgress || status == model.StatusNew
+}
+
+type AppointmentGRPCHandler struct {
+	pb.UnimplementedAppointmentServiceServer
+	service service.AppointmentService
+}
+
+func NewAppointmentGRPCHandler(service service.AppointmentService) *AppointmentGRPCHandler {
+	return &AppointmentGRPCHandler{
+		service: service,
+	}
+}
+
+func (h *AppointmentGRPCHandler) GetAppointment(_ context.Context, in *pb.GetAppointmentRequest) (*pb.AppointmentResponse, error) {
+	id := in.GetId()
+
+	appointment, err := h.service.GetAppointment(id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "Appointment with id %s not found", id)
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	appointment_status, ok := pb.AppointmentStatus_value[strings.ToUpper(string(appointment.Status))]
+
+	if !ok {
+		appointment_status = int32(pb.AppointmentStatus_NEW)
+	}
+
+	return &pb.AppointmentResponse{
+		Id:          appointment.ID,
+		Title:       appointment.Title,
+		Description: appointment.Description,
+		DoctorId:    appointment.DoctorID,
+		Status:      pb.AppointmentStatus(appointment_status),
+		CreatedAt:   timestamppb.New(appointment.CreatedAt),
+		UpdatedAt:   timestamppb.New(appointment.UpdatedAt),
+	}, nil
+}
+
+func (h *AppointmentGRPCHandler) GetAppointments(_ context.Context, in *pb.GetAppointmentsRequest) (*pb.GetAppointmentsResponse, error) {
+	appointments, err := h.service.GetAllAppointments()
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	appointments_response := make([]*pb.AppointmentResponse, len(appointments))
+
+	for _, appointment := range appointments {
+		appointment_status, ok := pb.AppointmentStatus_value[strings.ToUpper(string(appointment.Status))]
+
+		if !ok {
+			appointment_status = int32(pb.AppointmentStatus_NEW)
+		}
+
+		appointments_response = append(appointments_response, &pb.AppointmentResponse{
+			Id:          appointment.ID,
+			Title:       appointment.Title,
+			Description: appointment.Description,
+			DoctorId:    appointment.DoctorID,
+			Status:      pb.AppointmentStatus(appointment_status),
+			CreatedAt:   timestamppb.New(appointment.CreatedAt),
+			UpdatedAt:   timestamppb.New(appointment.UpdatedAt),
+		})
+	}
+
+	return &pb.GetAppointmentsResponse{
+		Appointments: appointments_response,
+	}, nil
+}
+
+func (h *AppointmentGRPCHandler) CreateAppointment(_ context.Context, in *pb.CreateAppointmentRequest) (*pb.AppointmentResponse, error) {
+	appointment, err := h.service.CreateAppointment(in.GetTitle(), in.GetDescription(), in.GetDoctorId())
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	appointment_status, ok := pb.AppointmentStatus_value[strings.ToUpper(string(appointment.Status))]
+
+	if !ok {
+		appointment_status = int32(pb.AppointmentStatus_NEW)
+	}
+
+	return &pb.AppointmentResponse{
+		Id:          appointment.ID,
+		Title:       appointment.Title,
+		Description: appointment.Description,
+		DoctorId:    appointment.DoctorID,
+		Status:      pb.AppointmentStatus(appointment_status),
+		CreatedAt:   timestamppb.New(appointment.CreatedAt),
+		UpdatedAt:   timestamppb.New(appointment.UpdatedAt),
+	}, nil
+}
+
+func (h *AppointmentGRPCHandler) UpdateAppointmentStatus(_ context.Context, in *pb.UpdateAppointmentStatusRequest) (*pb.UpdateAppointmentStatusResponse, error) {
+	id := in.GetId()
+	appointment_status, ok := pb.AppointmentStatus_name[int32(in.GetStatus())]
+
+	if !ok {
+		return nil, status.Error(codes.Unknown, "AppointmentStatus is not found")
+	}
+
+	if err := h.service.UpdateStatus(id, model.Status(appointment_status)); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "Appointment with id %s not found", id)
+		}
+
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.UpdateAppointmentStatusResponse{}, nil
 }

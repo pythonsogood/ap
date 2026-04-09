@@ -399,6 +399,42 @@ func (x *GetAppointmentsResponse) GetAppointments() []*AppointmentResponse {
 	return nil
 }
 
+type UpdateAppointmentStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAppointmentStatusResponse) Reset() {
+	*x = UpdateAppointmentStatusResponse{}
+	mi := &file_proto_appointment_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAppointmentStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAppointmentStatusResponse) ProtoMessage() {}
+
+func (x *UpdateAppointmentStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_appointment_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAppointmentStatusResponse.ProtoReflect.Descriptor instead.
+func (*UpdateAppointmentStatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_appointment_proto_rawDescGZIP(), []int{6}
+}
+
 var File_proto_appointment_proto protoreflect.FileDescriptor
 
 const file_proto_appointment_proto_rawDesc = "" +
@@ -425,16 +461,17 @@ const file_proto_appointment_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"_\n" +
 	"\x17GetAppointmentsResponse\x12D\n" +
-	"\fappointments\x18\x01 \x03(\v2 .appointment.AppointmentResponseR\fappointments*7\n" +
+	"\fappointments\x18\x01 \x03(\v2 .appointment.AppointmentResponseR\fappointments\"!\n" +
+	"\x1fUpdateAppointmentStatusResponse*7\n" +
 	"\x11AppointmentStatus\x12\a\n" +
 	"\x03NEW\x10\x00\x12\x0f\n" +
 	"\vIN_PROGRESS\x10\x01\x12\b\n" +
-	"\x04DONE\x10\x022\x92\x03\n" +
+	"\x04DONE\x10\x022\x9e\x03\n" +
 	"\x12AppointmentService\x12V\n" +
 	"\x0eGetAppointment\x12\".appointment.GetAppointmentRequest\x1a .appointment.AppointmentResponse\x12\\\n" +
 	"\x0fGetAppointments\x12#.appointment.GetAppointmentsRequest\x1a$.appointment.GetAppointmentsResponse\x12\\\n" +
-	"\x11CreateAppointment\x12%.appointment.CreateAppointmentRequest\x1a .appointment.AppointmentResponse\x12h\n" +
-	"\x17UpdateAppointmentStatus\x12+.appointment.UpdateAppointmentStatusRequest\x1a .appointment.AppointmentResponseB.Z,github.com/pythonsogood/ap-assignment1/protob\x06proto3"
+	"\x11CreateAppointment\x12%.appointment.CreateAppointmentRequest\x1a .appointment.AppointmentResponse\x12t\n" +
+	"\x17UpdateAppointmentStatus\x12+.appointment.UpdateAppointmentStatusRequest\x1a,.appointment.UpdateAppointmentStatusResponseB.Z,github.com/pythonsogood/ap-assignment1/protob\x06proto3"
 
 var (
 	file_proto_appointment_proto_rawDescOnce sync.Once
@@ -449,22 +486,23 @@ func file_proto_appointment_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_appointment_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_appointment_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_appointment_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_appointment_proto_goTypes = []any{
-	(AppointmentStatus)(0),                 // 0: appointment.AppointmentStatus
-	(*GetAppointmentRequest)(nil),          // 1: appointment.GetAppointmentRequest
-	(*GetAppointmentsRequest)(nil),         // 2: appointment.GetAppointmentsRequest
-	(*CreateAppointmentRequest)(nil),       // 3: appointment.CreateAppointmentRequest
-	(*UpdateAppointmentStatusRequest)(nil), // 4: appointment.UpdateAppointmentStatusRequest
-	(*AppointmentResponse)(nil),            // 5: appointment.AppointmentResponse
-	(*GetAppointmentsResponse)(nil),        // 6: appointment.GetAppointmentsResponse
-	(*timestamppb.Timestamp)(nil),          // 7: google.protobuf.Timestamp
+	(AppointmentStatus)(0),                  // 0: appointment.AppointmentStatus
+	(*GetAppointmentRequest)(nil),           // 1: appointment.GetAppointmentRequest
+	(*GetAppointmentsRequest)(nil),          // 2: appointment.GetAppointmentsRequest
+	(*CreateAppointmentRequest)(nil),        // 3: appointment.CreateAppointmentRequest
+	(*UpdateAppointmentStatusRequest)(nil),  // 4: appointment.UpdateAppointmentStatusRequest
+	(*AppointmentResponse)(nil),             // 5: appointment.AppointmentResponse
+	(*GetAppointmentsResponse)(nil),         // 6: appointment.GetAppointmentsResponse
+	(*UpdateAppointmentStatusResponse)(nil), // 7: appointment.UpdateAppointmentStatusResponse
+	(*timestamppb.Timestamp)(nil),           // 8: google.protobuf.Timestamp
 }
 var file_proto_appointment_proto_depIdxs = []int32{
 	0, // 0: appointment.UpdateAppointmentStatusRequest.status:type_name -> appointment.AppointmentStatus
 	0, // 1: appointment.AppointmentResponse.status:type_name -> appointment.AppointmentStatus
-	7, // 2: appointment.AppointmentResponse.created_at:type_name -> google.protobuf.Timestamp
-	7, // 3: appointment.AppointmentResponse.updated_at:type_name -> google.protobuf.Timestamp
+	8, // 2: appointment.AppointmentResponse.created_at:type_name -> google.protobuf.Timestamp
+	8, // 3: appointment.AppointmentResponse.updated_at:type_name -> google.protobuf.Timestamp
 	5, // 4: appointment.GetAppointmentsResponse.appointments:type_name -> appointment.AppointmentResponse
 	1, // 5: appointment.AppointmentService.GetAppointment:input_type -> appointment.GetAppointmentRequest
 	2, // 6: appointment.AppointmentService.GetAppointments:input_type -> appointment.GetAppointmentsRequest
@@ -473,7 +511,7 @@ var file_proto_appointment_proto_depIdxs = []int32{
 	5, // 9: appointment.AppointmentService.GetAppointment:output_type -> appointment.AppointmentResponse
 	6, // 10: appointment.AppointmentService.GetAppointments:output_type -> appointment.GetAppointmentsResponse
 	5, // 11: appointment.AppointmentService.CreateAppointment:output_type -> appointment.AppointmentResponse
-	5, // 12: appointment.AppointmentService.UpdateAppointmentStatus:output_type -> appointment.AppointmentResponse
+	7, // 12: appointment.AppointmentService.UpdateAppointmentStatus:output_type -> appointment.UpdateAppointmentStatusResponse
 	9, // [9:13] is the sub-list for method output_type
 	5, // [5:9] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -492,7 +530,7 @@ func file_proto_appointment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_appointment_proto_rawDesc), len(file_proto_appointment_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

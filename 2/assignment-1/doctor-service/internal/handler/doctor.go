@@ -112,10 +112,6 @@ func (h *DoctorGRPCHandler) GetDoctor(_ context.Context, in *pb.GetDoctorRequest
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if doctor == nil {
-		return nil, status.Errorf(codes.NotFound, "Doctor with id %s not found", id)
-	}
-
 	return &pb.DoctorResponse{
 		Id:             doctor.ID,
 		FullName:       doctor.FullName,

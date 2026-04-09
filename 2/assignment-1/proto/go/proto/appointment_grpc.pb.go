@@ -38,7 +38,7 @@ type AppointmentServiceClient interface {
 	// Creates appointment
 	CreateAppointment(ctx context.Context, in *CreateAppointmentRequest, opts ...grpc.CallOption) (*AppointmentResponse, error)
 	// Updates appointment status
-	UpdateAppointmentStatus(ctx context.Context, in *UpdateAppointmentStatusRequest, opts ...grpc.CallOption) (*AppointmentResponse, error)
+	UpdateAppointmentStatus(ctx context.Context, in *UpdateAppointmentStatusRequest, opts ...grpc.CallOption) (*UpdateAppointmentStatusResponse, error)
 }
 
 type appointmentServiceClient struct {
@@ -79,9 +79,9 @@ func (c *appointmentServiceClient) CreateAppointment(ctx context.Context, in *Cr
 	return out, nil
 }
 
-func (c *appointmentServiceClient) UpdateAppointmentStatus(ctx context.Context, in *UpdateAppointmentStatusRequest, opts ...grpc.CallOption) (*AppointmentResponse, error) {
+func (c *appointmentServiceClient) UpdateAppointmentStatus(ctx context.Context, in *UpdateAppointmentStatusRequest, opts ...grpc.CallOption) (*UpdateAppointmentStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AppointmentResponse)
+	out := new(UpdateAppointmentStatusResponse)
 	err := c.cc.Invoke(ctx, AppointmentService_UpdateAppointmentStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ type AppointmentServiceServer interface {
 	// Creates appointment
 	CreateAppointment(context.Context, *CreateAppointmentRequest) (*AppointmentResponse, error)
 	// Updates appointment status
-	UpdateAppointmentStatus(context.Context, *UpdateAppointmentStatusRequest) (*AppointmentResponse, error)
+	UpdateAppointmentStatus(context.Context, *UpdateAppointmentStatusRequest) (*UpdateAppointmentStatusResponse, error)
 	mustEmbedUnimplementedAppointmentServiceServer()
 }
 
@@ -122,7 +122,7 @@ func (UnimplementedAppointmentServiceServer) GetAppointments(context.Context, *G
 func (UnimplementedAppointmentServiceServer) CreateAppointment(context.Context, *CreateAppointmentRequest) (*AppointmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAppointment not implemented")
 }
-func (UnimplementedAppointmentServiceServer) UpdateAppointmentStatus(context.Context, *UpdateAppointmentStatusRequest) (*AppointmentResponse, error) {
+func (UnimplementedAppointmentServiceServer) UpdateAppointmentStatus(context.Context, *UpdateAppointmentStatusRequest) (*UpdateAppointmentStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAppointmentStatus not implemented")
 }
 func (UnimplementedAppointmentServiceServer) mustEmbedUnimplementedAppointmentServiceServer() {}

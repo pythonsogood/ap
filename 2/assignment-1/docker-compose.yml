@@ -2,7 +2,8 @@ services:
   doctor-service:
     image: doctor-service
     build:
-      context: ./doctor-service
+      context: .
+      dockerfile: ./doctor-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
     volumes:
@@ -13,7 +14,8 @@ services:
   appointment-service:
     image: appointment-service
     build:
-      context: ./appointment-service
+      context: .
+      dockerfile: ./appointment-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
     volumes:

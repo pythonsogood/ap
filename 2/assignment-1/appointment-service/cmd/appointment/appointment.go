@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -12,13 +13,15 @@ import (
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
+	grpc_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/grpc"
 	http_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
+	"google.golang.org/grpc"
 )
 
-func serve_http(server_addr string, doctor_service service.AppointmentService) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
+func serve_http(server_addr string, appointment_service service.AppointmentService) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
 	router := gin.Default()
 
-	appointment_handler := handler.NewAppointmentHTTPHandler(doctor_service)
+	appointment_handler := handler.NewAppointmentHTTPHandler(appointment_service)
 
 	if err := http_transport.SetupAppointmentTransport(router, appointment_handler); err != nil {
 		return router, appointment_handler, err
@@ -29,6 +32,30 @@ func serve_http(server_addr string, doctor_service service.AppointmentService) (
 	}
 
 	return router, appointment_handler, nil
+}
+
+func serve_grpc(server_addr string, appointment_service service.AppointmentService) (*net.Listener, *handler.AppointmentGRPCHandler, error) {
+	lis, err := net.Listen("tcp", server_addr)
+
+	if err != nil {
+		return &lis, nil, err
+	}
+
+	appointment_handler := handler.NewAppointmentGRPCHandler(appointment_service)
+
+	s := grpc.NewServer()
+
+	err = grpc_transport.SetupAppointmentdTransport(s, appointment_handler)
+
+	if err != nil {
+		return &lis, appointment_handler, err
+	}
+
+	if err := s.Serve(lis); err != nil {
+		return &lis, appointment_handler, err
+	}
+
+	return &lis, appointment_handler, nil
 }
 
 func main() {
@@ -66,7 +93,13 @@ func main() {
 
 	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
 
-	_, _, err = serve_http(server_addr, appointment_service)
+	// _, _, err = serve_http(server_addr, appointment_service)
+
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+
+	_, _, err = serve_grpc(server_addr, appointment_service)
 
 	if err != nil {
 		panic(err.Error())
