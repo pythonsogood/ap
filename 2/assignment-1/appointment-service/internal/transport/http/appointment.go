@@ -7,7 +7,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/handler"
 )
 
-func SetupAppointmentTransport(engine *gin.Engine, appointment_handler handler.AppointmentHandler) error {
+func SetupAppointmentTransport(engine *gin.Engine, appointment_handler handler.AppointmentHTTPHandler) error {
 	appointment_group := engine.Group("/appointments")
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {

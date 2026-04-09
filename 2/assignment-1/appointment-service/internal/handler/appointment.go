@@ -10,7 +10,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
 )
 
-type AppointmentHandler interface {
+type AppointmentHTTPHandler interface {
 	GETByID(c *gin.Context)
 	GETList(c *gin.Context)
 	POST(c *gin.Context)
@@ -19,17 +19,17 @@ type AppointmentHandler interface {
 	StatusValidator(fl validator.FieldLevel) bool
 }
 
-type appointmentHandlerImpl struct {
+type appointmentHTTPHandlerImpl struct {
 	service service.AppointmentService
 }
 
-func NewAppointmentHandler(service service.AppointmentService) AppointmentHandler {
-	return &appointmentHandlerImpl{
+func NewAppointmentHTTPHandler(service service.AppointmentService) AppointmentHTTPHandler {
+	return &appointmentHTTPHandlerImpl{
 		service: service,
 	}
 }
 
-func (h *appointmentHandlerImpl) GETByID(c *gin.Context) {
+func (h *appointmentHTTPHandlerImpl) GETByID(c *gin.Context) {
 	id := c.Param("id")
 
 	appointment, err := h.service.GetAppointment(id)
@@ -48,7 +48,7 @@ func (h *appointmentHandlerImpl) GETByID(c *gin.Context) {
 	c.JSON(http.StatusOK, appointment)
 }
 
-func (h *appointmentHandlerImpl) GETList(c *gin.Context) {
+func (h *appointmentHTTPHandlerImpl) GETList(c *gin.Context) {
 	appointments, err := h.service.GetAllAppointments()
 
 	if err != nil {
@@ -65,7 +65,7 @@ type AppointmentPOSTBind struct {
 	DoctorID    string `json:"doctor_id" binding:"required"`
 }
 
-func (h *appointmentHandlerImpl) POST(c *gin.Context) {
+func (h *appointmentHTTPHandlerImpl) POST(c *gin.Context) {
 	var appointment_bind AppointmentPOSTBind
 
 	if err := c.ShouldBindJSON(&appointment_bind); err != nil {
@@ -87,7 +87,7 @@ type AppointmentPATCHStatusBind struct {
 	Status model.Status `json:"status" binding:"required,validstatus"`
 }
 
-func (h *appointmentHandlerImpl) PATCHStatusByID(c *gin.Context) {
+func (h *appointmentHTTPHandlerImpl) PATCHStatusByID(c *gin.Context) {
 	id := c.Param("id")
 
 	var status_bind AppointmentPATCHStatusBind
@@ -111,7 +111,7 @@ func (h *appointmentHandlerImpl) PATCHStatusByID(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *appointmentHandlerImpl) StatusValidator(fl validator.FieldLevel) bool {
+func (h *appointmentHTTPHandlerImpl) StatusValidator(fl validator.FieldLevel) bool {
 	status, ok := fl.Field().Interface().(model.Status)
 
 	if !ok {

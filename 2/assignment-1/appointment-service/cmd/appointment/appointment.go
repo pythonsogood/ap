@@ -15,6 +15,22 @@ import (
 	http_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
 )
 
+func serve_http(server_addr string, doctor_service service.AppointmentService) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
+	router := gin.Default()
+
+	appointment_handler := handler.NewAppointmentHTTPHandler(doctor_service)
+
+	if err := http_transport.SetupAppointmentTransport(router, appointment_handler); err != nil {
+		return router, appointment_handler, err
+	}
+
+	if err := router.Run(server_addr); err != nil {
+		return router, appointment_handler, err
+	}
+
+	return router, appointment_handler, nil
+}
+
 func main() {
 	conf, err := config.NewDefaultConfig()
 
@@ -29,8 +45,6 @@ func main() {
 	}
 
 	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
-
-	router := gin.Default()
 
 	appointment_db, err := database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
 
@@ -52,13 +66,9 @@ func main() {
 
 	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
 
-	appointment_handler := handler.NewAppointmentHandler(appointment_service)
+	_, _, err = serve_http(server_addr, appointment_service)
 
-	if err := http_transport.SetupAppointmentTransport(router, appointment_handler); err != nil {
-		panic(err.Error())
-	}
-
-	if err := router.Run(server_addr); err != nil {
+	if err != nil {
 		panic(err.Error())
 	}
 }
