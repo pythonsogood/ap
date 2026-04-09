@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -79,6 +80,10 @@ func (s grpcDoctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
 	})
 
 	if err != nil {
+		if strings.Contains(err.Error(), "code = NotFound") {
+			return false, nil
+		}
+
 		return false, fmt.Errorf("[ERROR] Doctors service is currently unavailable\nError: %s", err.Error())
 	}
 
