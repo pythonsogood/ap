@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package appointment;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/pythonsogood/ap-assignment1/proto";
+
+// Appointment Service
+service AppointmentService {
+	// Returns appointment
+	rpc GetAppointment(GetAppointmentRequest) returns (AppointmentResponse);
+	// Returns all appointments
+	rpc GetAppointments(GetAppointmentsRequest) returns (GetAppointmentsResponse);
+	// Creates appointment
+	rpc CreateAppointment(CreateAppointmentRequest) returns (AppointmentResponse);
+	// Updates appointment status
+	rpc UpdateAppointmentStatus(UpdateAppointmentStatusRequest) returns (AppointmentResponse);
+}
+
+enum AppointmentStatus {
+	NEW = 0;
+	IN_PROGRESS = 1;
+	DONE = 2;
+}
+
+message GetAppointmentRequest {
+	string id = 1;
+}
+
+message GetAppointmentsRequest {}
+
+message CreateAppointmentRequest {
+	string title = 1;
+	string description = 2;
+	string doctor_id = 3;
+}
+
+message UpdateAppointmentStatusRequest {
+	string id = 1;
+	AppointmentStatus status = 2;
+}
+
+message AppointmentResponse {
+	string id = 1;
+	string title = 2;
+	string description = 3;
+	string doctor_id = 4;
+	AppointmentStatus status = 5;
+	google.protobuf.Timestamp created_at = 6;
+	google.protobuf.Timestamp updated_at = 7;
+}
+
+message GetAppointmentsResponse {
+	repeated AppointmentResponse appointments = 1;
+}

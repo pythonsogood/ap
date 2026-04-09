@@ -5,7 +5,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
 )
 
-func SetupDoctorTransport(engine *gin.Engine, doctor_handler handler.DoctorHandler) error {
+func SetupDoctorTransport(engine *gin.Engine, doctor_handler handler.DoctorHTTPHandler) error {
 	doctor_group := engine.Group("/doctors")
 
 	doctor_group.GET("/", doctor_handler.GETList)

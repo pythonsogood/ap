@@ -1,6 +1,6 @@
 module github.com/pythonsogood/ap-assignment1/doctor
 
-go 1.26.0
+go 1.26.1
 
 require (
 	github.com/BurntSushi/toml v1.6.0
@@ -30,6 +30,7 @@ require (
 	github.com/ncruces/go-sqlite3-wasm v1.0.4-0.20260329114232-2491c387476c // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
+	github.com/pythonsogood/ap-assignment1/proto v0.0.0
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -40,5 +41,9 @@ require (
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
+	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/pythonsogood/ap-assignment1/proto v0.0.0 => ../proto/go/proto

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package doctor;
+
+option go_package = "github.com/pythonsogood/ap-assignment1/proto";
+
+// Doctor Service
+service DoctorService {
+	// Returns doctor
+	rpc GetDoctor(GetDoctorRequest) returns (DoctorResponse);
+	// Returns all doctors
+	rpc GetDoctors(GetDoctorsRequest) returns (GetDoctorsResponse);
+	// Creates doctor
+	rpc CreateDoctor(CreateDoctorRequest) returns (DoctorResponse);
+}
+
+message GetDoctorRequest {
+	string id = 1;
+}
+
+message GetDoctorsRequest {}
+
+message CreateDoctorRequest {
+	string full_name = 1;
+	string specialization = 2;
+	string email = 3;
+}
+
+message DoctorResponse {
+	string id = 1;
+	string full_name = 2;
+	string specialization = 3;
+	string email = 4;
+}
+
+message GetDoctorsResponse {
+	repeated DoctorResponse doctors = 1;
+}
