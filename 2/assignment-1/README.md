@@ -1,4 +1,4 @@
-# Assignment 1 - Clean Architecture-Based Microservices
+# Assignment 2 - gRPC Migration
 
 > small 2-service platform composed of a **Doctor Service** and an **Appointment Service**
 
@@ -10,12 +10,12 @@
 
 ### Technology Stack
 - Language: Go 1.26
-- Framework: Gin
+- Framework: gRPC
 - Database: SQLite3
 - Configuration: TOML
 
 ### Architecture Diagram
-![architecture diagram](/2/assignment-1/assets/architecture-diagram.svg)
+![architecture diagram](/2/assignment-1/assets/architecture-diagram-grpc.svg)
 
 ## Service Responsibilities
 
@@ -30,124 +30,197 @@
 - Retrieve appointment by ID
 - List all appointments
 - Update appointment status
-- Validate doctor existence via Doctor Service API
+- Validate doctor existence via Doctor Service gRPC
+
+## Proto Contract Description
+
+### Doctor Service (doctor.proto)
+
+| RPC | Request | Response | Business Rule |
+|-----|---------|----------|---------------|
+| `GetDoctor` | `GetDoctorRequest { string id }` | `DoctorResponse { id, full_name, specialization, email }` | Returns doctor by ID, returns NotFound if not exists |
+| `GetDoctors` | `GetDoctorsRequest {}` | `GetDoctorsResponse { repeated DoctorResponse doctors }` | Returns all doctors |
+| `CreateDoctor` | `CreateDoctorRequest { full_name, specialization, email }` | `DoctorResponse` | Creates doctor, enforces unique email constraint |
+
+### Appointment Service (appointment.proto)
+
+| RPC | Request | Response | Business Rule |
+|-----|---------|----------|---------------|
+| `GetAppointment` | `GetAppointmentRequest { string id }` | `AppointmentResponse` | Returns appointment by ID, returns NotFound if not exists |
+| `GetAppointments` | `GetAppointmentsRequest {}` | `GetAppointmentsResponse { repeated AppointmentResponse }` | Returns all appointments |
+| `CreateAppointment` | `CreateAppointmentRequest { title, description, doctor_id }` | `AppointmentResponse` | Validates doctor_id via Doctor Service gRPC before creation |
+| `UpdateAppointmentStatus` | `UpdateAppointmentStatusRequest { id, status }` | `UpdateAppointmentStatusResponse` | Updates status (NEW -> IN_PROGRESS -> DONE) |
+
+**AppointmentStatus Enum:**
+- `NEW` (0): Initial state when created
+- `IN_PROGRESS` (1): Appointment is being conducted
+- `DONE` (2): Appointment completed
+
+## REST vs gRPC Trade-offs
+
+| Aspect | REST | gRPC | When to Choose |
+|--------|------|------|----------------|
+| **Protocol** | HTTP/1.1 + JSON | HTTP/2 + Protocol Buffers | gRPC for performance, REST for browser compatibility |
+| **Contract** | OpenAPI/Swagger (manual) | .proto files (code-generated) | gRPC for strong typing, REST for flexibility |
+| **Code Generation** | Manual implementation | Auto-generated | gRPC for faster development, REST for more control |
+| **Streaming** | requires WebSockets | Native | gRPC for real-time, REST for simpler use cases |
+| **Browser Support** | Universal | Limited | REST for web clients, gRPC for internal services |
+
+### Why gRPC for this project?
+- Strong typing with Protocol Buffers reduces runtime errors
+- Code generation ensures client/server contracts stay in sync
+- HTTP/2 provides better performance
+- Smaller payload sizes
 
 ## Folder Structure
 
 ```
-appointment-service
-│   .dockerignore
-│   Dockerfile
-│   go.mod
-│   go.sum
-│
-├───cmd
-│   └───appointment
-│       │   appointment.go
+┌───appointment-service
+│   │   .dockerignore
+│   │   Dockerfile
+│   │   go.mod
+│   │   go.sum
+│   │
+│   ├───cmd
+│   │   └───appointment
+│   │       │   appointment.go
+│   │       │
+│   │       └───config
+│   │               config.go
+│   │
+│   ├───configs
+│   │   └───appointment
+│   │           config.toml
+│   │
+│   └───internal
+│       ├───database
+│       │       model.go
+│       │       sqlite.go
 │       │
-│       └───config
-│               config.go
-│
-├───configs
-│   └───appointment
-│           config.toml
-│
-└───internal
-    ├───database
-    │       model.go
-    │       sqlite.go
-    │
-    ├───handler
-    │       appointment.go
-    │
-    ├───model
-    │       appointment.go
-    │
-    ├───repository
-    │       appointment.go
-    │
-    ├───service
-    │       appointment.go
-    │       doctor_service.go
-    │
-    └───transport
-        └───http
-                appointment.go
-
-doctor-service
-│   .dockerignore
-│   Dockerfile
-│   go.mod
-│   go.sum
-│
-├───cmd
-│   └───doctor
-│       │   doctor.go
+│       ├───handler
+│       │       appointment.go
 │       │
-│       └───config
-│               config.go
+│       ├───model
+│       │       appointment.go
+│       │
+│       ├───repository
+│       │       appointment.go
+│       │
+│       ├───service
+│       │       appointment.go
+│       │       doctor_service.go
+│       │
+│       └───transport
+│           ├───grpc
+│           │       appointment.go
+│           │
+│           └───http
+│                   appointment.go
 │
-├───configs
-│   └───doctor
-│           config.toml
+├───doctor-service
+│   │   .dockerignore
+│   │   Dockerfile
+│   │   go.mod
+│   │   go.sum
+│   │
+│   ├───cmd
+│   │   └───doctor
+│   │       │   doctor.go
+│   │       │
+│   │       └───config
+│   │               config.go
+│   │
+│   ├───configs
+│   │   └───doctor
+│   │           config.toml
+│   │
+│   └───internal
+│       ├───database
+│       │       model.go
+│       │       sqlite.go
+│       │
+│       ├───handler
+│       │       doctor.go
+│       │
+│       ├───model
+│       │       doctor.go
+│       │
+│       ├───repository
+│       │       doctor.go
+│       │
+│       ├───service
+│       │       doctor.go
+│       │
+│       └───transport
+│           ├───grpc
+│           │       doctor.go
+│           │
+│           └───http
+│                   doctor.go
 │
-└───internal
-    ├───database
-    │       model.go
-    │       sqlite.go
+└───proto
+    │   appointment.proto
+    │   doctor.proto
     │
-    ├───handler
-    │       doctor.go
-    │
-    ├───model
-    │       doctor.go
-    │
-    ├───repository
-    │       doctor.go
-    │
-    ├───service
-    │       doctor.go
-    │
-    └───transport
-        └───http
-                doctor.go
+    └───go
+        └───proto
+                appointment.pb.go
+                appointment_grpc.pb.go
+                doctor.pb.go
+                doctor_grpc.pb.go
+                go.mod
+                go.sum
 ```
 
 ## Dependency Flow
-![dependency flow](/2/assignment-1/assets/dependency-flow.svg)
+![dependency flow](/2/assignment-1/assets/dependency-flow-grpc.svg)
 
 ## Inter-Service Communication
 
 ### How Appointment Service Validates Doctor
 
-HTTP Contract:
-- Endpoint: `GET http://doctor-service:8081/doctors/{doctor_id}`
+The Appointment Service calls the Doctor Service via gRPC to validate that a doctor exists before creating an appointment.
+
+**gRPC Contract:**
+- Service: `DoctorService`
+- Method: `GetDoctor(GetDoctorRequest) returns (DoctorResponse)`
 - Timeout: `15 seconds`
-- Success Response: HTTP 200 OK
-- Failure Response: Any other status code
 
 Implementation ([appointment-service/internal/service/doctor_service.go](/2/assignment-1/appointment-service/internal/service/doctor_service.go)):
 ```go
-func (s doctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/doctors/%s", s.doctor_service_address, doctor_id), nil)
+func (s grpcDoctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
+	conn, err := grpc.NewClient(s.doctor_service_address, grpc.WithTransportCredentials(insecure.NewBundle().TransportCredentials()))
 
 	if err != nil {
 		return false, err
 	}
 
-	req.Header.Set("X-Service-Name", "appointment-service")
+	defer conn.Close()
 
-	resp, err := s.HTTPClient.Do(req)
+	client := pb.NewDoctorServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+
+	_, err = client.GetDoctor(ctx, &pb.GetDoctorRequest{
+		Id: doctor_id,
+	})
 
 	if err != nil {
-		log.Println("[ERROR] Doctors service is currently unavailable\nError: ", err.Error())
+		if strings.Contains(err.Error(), "code = NotFound") {
+			return false, nil
+		}
 
-		return false, fmt.Errorf("Doctors service is currently unavailable\nError: %s", err.Error())
+		return false, fmt.Errorf("[ERROR] Doctors service is currently unavailable\nError: %s", err.Error())
 	}
 
-	return resp.StatusCode == http.StatusOK, nil
+	return true, nil
 }
 ```
+
+**Error Handling:**
+- If doctor not found (`NotFound`): returns `false, nil` -> appointment creation fails with validation error
+- If service unavailable: returns error with `Unavailable` status -> appointment creation fails
 
 ## How to Run the Project
 
@@ -156,8 +229,8 @@ docker compose up --build
 ```
 
 This will start both services:
-- Doctor Service: http://localhost:8081
-- Appointment Service: http://localhost:8082
+- Doctor Service: localhost:8081
+- Appointment Service: localhost:8082
 
 ## Why Separate Databases
 
@@ -166,7 +239,7 @@ Each service owns its data independently:
 - Appointment Service owns the `appointments` table
 
 Pros of separate databases:
-- Encapsulation: each service's data is only accessible through its API
+- Encapsulation: each service's data is only accessible through its gRPC
 - Independence: services can develop independently
 
 ### Why Not a Shared Database?
@@ -180,77 +253,18 @@ A shared database would create a distributed monolith:
 ### When Doctor Service is Unavailable
 
 If the Doctor Service is unreachable when creating/updating an appointment:
-1. Appointment Service attempts HTTP call to Doctor Service
-2. Timeout triggers after `15 seconds`
-3. Error is returned to client
-4. Failure is logged
 
-Response to Client:
-```json
-{
-	"error": "Doctors service is currently unavailable\nError: <error_details>"
-}
-```
+1. Appointment Service attempts gRPC call to Doctor Service
+2. Context timeout triggers after `15 seconds` (configurable)
+3. gRPC returns `Unavailable` status code
+4. Error is returned to client with details
 
-Logged Output:
+**gRPC Status Codes:**
+- `Unavailable` (code 14): Doctors service is currently unavailable
+- `NotFound` (code 5): Doctor with id <ID> not found
+
+**Logged Output:**
 ```
 [ERROR] Doctors service is currently unavailable
 Error: <error_details>
-```
-
-## API Examples
-
-### Doctor Service (Port 8081)
-
-#### Create Doctor
-```sh
-curl -X POST http://localhost:8081/doctors \
-	-H "Content-Type: application/json" \
-	-d '{
-		"full_name": "Dr. Aisha Seitkali",
-		"specialization": "Cardiology",
-		"email": "a.seitkali@clinic.kz"
-	}'
-```
-
-#### Get Doctor by ID
-```sh
-curl http://localhost:8081/doctors/{id}
-```
-
-#### List All Doctors
-```sh
-curl http://localhost:8081/doctors
-```
-
-### Appointment Service (Port 8082)
-
-#### Create Appointment
-```sh
-curl -X POST http://localhost:8082/appointments \
-	-H "Content-Type: application/json" \
-	-d '{
-		"title": "Initial cardiac consultation",
-		"description": "Patient referred for palpitations and shortness of breath",
-		"doctor_id": "<doctor-id-from-above>"
-	}'
-```
-
-#### Get Appointment by ID
-```sh
-curl http://localhost:8082/appointments/{id}
-```
-
-#### List All Appointments
-```sh
-curl http://localhost:8082/appointments
-```
-
-#### Update Appointment Status
-```sh
-curl -X PATCH http://localhost:8082/appointments/{id}/status \
-	-H "Content-Type: application/json" \
-	-d '{
-		"status": "in_progress"
-	}'
 ```
