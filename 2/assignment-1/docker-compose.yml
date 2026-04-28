@@ -1,4 +1,14 @@
 services:
+  message-broker-nats:
+    image: nats:scratch
+    command: "-c /etc/nats/nats.conf"
+    restart: unless-stopped
+    ports:
+      - "4222:4222" # client
+      - "6222:6222" # cluster
+      - "8222:8222" # monitor
+    volumes:
+      - ./nats/nats.conf:/etc/nats/nats.conf
   doctor-service:
     image: doctor-service
     build:
@@ -11,6 +21,8 @@ services:
     ports:
       - "8081:8081"
     restart: unless-stopped
+    depends_on:
+      - nats
   appointment-service:
     image: appointment-service
     build:
@@ -23,6 +35,18 @@ services:
     ports:
       - "8082:8082"
     restart: unless-stopped
+    depends_on:
+      - nats
+  notification-service:
+    image: notification-service
+    build:
+      context: .
+      dockerfile: ./notification-service/Dockerfile
+    environment:
+      CONFIG_FILE: config.toml
+    restart: unless-stopped
+    depends_on:
+      - nats
 
 volumes:
   doctor-data:

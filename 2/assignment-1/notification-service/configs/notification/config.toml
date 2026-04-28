@@ -1,0 +1,5 @@
+[message-broker]
+type = "nats" # supported: nats
+
+[message-broker.nats]
+connection_url = ""

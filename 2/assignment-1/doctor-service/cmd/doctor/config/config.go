@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/caarlos0/env/v11"
 )
 
 type DatabaseType string
@@ -20,42 +21,48 @@ const (
 )
 
 type serverConfig struct {
-	Port uint16 `toml:"port"`
+	Port uint16 `toml:"port" env:"SERVER_PORT"`
 }
 
 type databaseSQLite3Config struct {
-	Source string `toml:"source"`
+	Source string `toml:"source" env:"DB_SQLITE_SOURCE"`
 }
 
 type databasePostgreSQLConfig struct {
-	ConnectionUrl string `toml:"connection_url"`
+	ConnectionUrl string `toml:"connection_url" env:"DB_POSTGRESQL_CONNECTION_URL"`
 }
 
 type databaseConfig struct {
-	Type       DatabaseType             `toml:"type"`
+	Type       DatabaseType             `toml:"type" env:"DB_TYPE"`
 	Sqlite3    databaseSQLite3Config    `toml:"sqlite3"`
 	Postgresql databasePostgreSQLConfig `toml:"postgresql"`
 }
 
 type messageBrokerNATSConfig struct {
-	ConnectionUrl string `toml:"connection_url"`
+	ConnectionUrl string `toml:"connection_url" env:"MESSAGE_BROKER_NATS_CONNECTION_URL"`
 }
 
 type messageBrokerConfig struct {
-	Type MessageBrokerType       `toml:"type"`
+	Type MessageBrokerType       `toml:"type" env:"MESSAGE_BROKER_TYPE"`
 	Nats messageBrokerNATSConfig `toml:"nats"`
 }
 
 type Config struct {
 	Server        serverConfig        `toml:"server"`
 	Database      databaseConfig      `toml:"database"`
-	MessageBroker messageBrokerConfig `toml:"message_broker"`
+	MessageBroker messageBrokerConfig `toml:"message-broker"`
 }
 
 func ParseConfig(config_path string) (*Config, error) {
 	var conf Config
 
 	_, err := toml.DecodeFile(config_path, &conf)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = env.Parse(&conf)
 
 	if err != nil {
 		return nil, err

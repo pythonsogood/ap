@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/caarlos0/env/v11"
 )
 
 type DatabaseType string
@@ -13,8 +14,8 @@ const (
 )
 
 type doctorServiceConfig struct {
-	Address string `toml:"address"`
-	Timeout uint   `toml:"timeout"`
+	Address string `toml:"address" env:"SERVICES_DOCTOR_ADDRESS"`
+	Timeout uint   `toml:"timeout" env:"SERVICES_DOCTOR_TIMEOUT"`
 }
 
 type servicesConfig struct {
@@ -22,15 +23,15 @@ type servicesConfig struct {
 }
 
 type serverConfig struct {
-	Port uint16 `toml:"port"`
+	Port uint16 `toml:"port" env:"SERVER_PORT"`
 }
 
 type databaseSQLite3Config struct {
-	Source string `toml:"source"`
+	Source string `toml:"source" env:"DB_SQLITE_SOURCE"`
 }
 
 type databaseConfig struct {
-	Type    DatabaseType          `toml:"type"`
+	Type    DatabaseType          `toml:"type" env:"DB_TYPE"`
 	Sqlite3 databaseSQLite3Config `toml:"sqlite3"`
 }
 
@@ -44,6 +45,12 @@ func ParseConfig(config_path string) (*Config, error) {
 	var conf Config
 
 	_, err := toml.DecodeFile(config_path, &conf)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = env.Parse(&conf)
 
 	if err != nil {
 		return nil, err
