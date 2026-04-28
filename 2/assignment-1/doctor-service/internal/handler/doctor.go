@@ -3,10 +3,13 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/event"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,12 +24,14 @@ type DoctorHTTPHandler interface {
 }
 
 type doctorHTTPHandlerImpl struct {
-	service service.DoctorService
+	service         service.DoctorService
+	event_publisher event.EventPublisher
 }
 
-func NewDoctorHTTPHandler(service service.DoctorService) DoctorHTTPHandler {
+func NewDoctorHTTPHandler(service service.DoctorService, event_publisher event.EventPublisher) DoctorHTTPHandler {
 	return &doctorHTTPHandlerImpl{
-		service: service,
+		service:         service,
+		event_publisher: event_publisher,
 	}
 }
 
@@ -86,17 +91,33 @@ func (h *doctorHTTPHandlerImpl) POST(c *gin.Context) {
 		return
 	}
 
+	err = h.event_publisher.DoctorCreated(
+		event.NewDoctorCreatedEvent(
+			doctor.ID,
+			doctor.FullName,
+			doctor.Specialization,
+			doctor.Email,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[CreateDoctor] event publisher error: %s\n", err.Error())
+	}
+
 	c.JSON(http.StatusOK, doctor)
 }
 
 type DoctorGRPCHandler struct {
 	pb.UnimplementedDoctorServiceServer
-	service service.DoctorService
+	service         service.DoctorService
+	event_publisher event.EventPublisher
 }
 
-func NewDoctorGRPCHandler(service service.DoctorService) *DoctorGRPCHandler {
+func NewDoctorGRPCHandler(service service.DoctorService, event_publisher event.EventPublisher) *DoctorGRPCHandler {
 	return &DoctorGRPCHandler{
-		service: service,
+		service:         service,
+		event_publisher: event_publisher,
 	}
 }
 
@@ -155,6 +176,20 @@ func (h *DoctorGRPCHandler) CreateDoctor(_ context.Context, in *pb.CreateDoctorR
 		}
 
 		return nil, status.Error(code, err.Error())
+	}
+
+	err = h.event_publisher.DoctorCreated(
+		event.NewDoctorCreatedEvent(
+			doctor.ID,
+			doctor.FullName,
+			doctor.Specialization,
+			doctor.Email,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[CreateDoctor] event publisher error: %s\n", err.Error())
 	}
 
 	return &pb.DoctorResponse{

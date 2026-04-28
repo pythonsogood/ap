@@ -9,7 +9,14 @@ import (
 type DatabaseType string
 
 const (
-	DatabaseTypeSQLite DatabaseType = "sqlite3"
+	DatabaseTypeSQLite     DatabaseType = "sqlite3"
+	DatabaseTypePostgreSQL DatabaseType = "postgresql"
+)
+
+type MessageBrokerType string
+
+const (
+	MessageBrokerTypeNATS MessageBrokerType = "nats"
 )
 
 type serverConfig struct {
@@ -20,14 +27,29 @@ type databaseSQLite3Config struct {
 	Source string `toml:"source"`
 }
 
+type databasePostgreSQLConfig struct {
+	ConnectionUrl string `toml:"connection_url"`
+}
+
 type databaseConfig struct {
-	Type    DatabaseType          `toml:"type"`
-	Sqlite3 databaseSQLite3Config `toml:"sqlite3"`
+	Type       DatabaseType             `toml:"type"`
+	Sqlite3    databaseSQLite3Config    `toml:"sqlite3"`
+	Postgresql databasePostgreSQLConfig `toml:"postgresql"`
+}
+
+type messageBrokerNATSConfig struct {
+	ConnectionUrl string `toml:"connection_url"`
+}
+
+type messageBrokerConfig struct {
+	Type MessageBrokerType       `toml:"type"`
+	Nats messageBrokerNATSConfig `toml:"nats"`
 }
 
 type Config struct {
-	Server   serverConfig   `toml:"server"`
-	Database databaseConfig `toml:"database"`
+	Server        serverConfig        `toml:"server"`
+	Database      databaseConfig      `toml:"database"`
+	MessageBroker messageBrokerConfig `toml:"message_broker"`
 }
 
 func ParseConfig(config_path string) (*Config, error) {
