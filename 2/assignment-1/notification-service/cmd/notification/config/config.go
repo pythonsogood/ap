@@ -14,12 +14,13 @@ const (
 )
 
 type messageBrokerNATSConfig struct {
-	ConnectionUrl string `toml:"connection_url" env:"NATS_CONNECTION_URL"`
+	ConnectionUrl string `toml:"connection_url" env:"MESSAGE_BROKER_NATS_CONNECTION_URL"`
 }
 
 type messageBrokerConfig struct {
-	Type MessageBrokerType       `toml:"type"`
-	Nats messageBrokerNATSConfig `toml:"nats"`
+	Type           MessageBrokerType       `toml:"type" env:"MESSAGE_BROKER_TYPE"`
+	LoggedSubjects []string                `toml:"logged_subjects" env:"MESSAGE_BROKER_LOGGED_SUBJECTS"`
+	Nats           messageBrokerNATSConfig `toml:"nats"`
 }
 
 type Config struct {

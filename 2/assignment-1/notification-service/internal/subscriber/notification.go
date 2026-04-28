@@ -1,11 +1,33 @@
 package subscriber
 
-import "github.com/nats-io/nats.go"
+import (
+	"log"
 
-type EventSubscriber interface{}
+	"github.com/nats-io/nats.go"
+)
 
-type natsEventSubscriber struct{}
+type EventSubscriber interface {
+	SubscribeNotification(subj string) error
+}
+
+type natsEventSubscriber struct {
+	nc *nats.Conn
+}
 
 func NewNATSEventSubscriber(nc *nats.Conn) EventSubscriber {
-	return &natsEventSubscriber{}
+	return &natsEventSubscriber{
+		nc: nc,
+	}
+}
+
+func (e *natsEventSubscriber) SubscribeNotification(subj string) error {
+	_, err := e.nc.Subscribe(subj, func(m *nats.Msg) {
+		log.Printf("%v\n", string(m.Data))
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

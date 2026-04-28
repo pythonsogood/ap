@@ -1,5 +1,10 @@
 [message-broker]
 type = "nats" # supported: nats
+logged_subjects = [
+	"doctors.created",
+	"appointments.created",
+	"appointments.status_updated",
+]
 
 [message-broker.nats]
 connection_url = ""

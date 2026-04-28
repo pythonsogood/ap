@@ -13,6 +13,8 @@ func main() {
 		panic(err.Error())
 	}
 
+	var event_subscriber subscriber.EventSubscriber
+
 	switch conf.MessageBroker.Type {
 	case config.MessageBrokerTypeNATS:
 		nc, err := nats.Connect(conf.MessageBroker.Nats.ConnectionUrl)
@@ -21,8 +23,14 @@ func main() {
 			panic(err.Error())
 		}
 
-		event_subscriber := subscriber.NewNATSEventSubscriber(nc)
+		event_subscriber = subscriber.NewNATSEventSubscriber(nc)
 	default:
 		panic("Unsupported message broker type!")
+	}
+
+	for _, subj := range conf.MessageBroker.LoggedSubjects {
+		if err := event_subscriber.SubscribeNotification(subj); err != nil {
+			panic(err.Error())
+		}
 	}
 }
