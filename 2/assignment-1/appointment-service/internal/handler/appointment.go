@@ -3,11 +3,14 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/pythonsogood/ap-assignment1/appointment/internal/event"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
 	"google.golang.org/grpc/codes"
@@ -27,12 +30,14 @@ type AppointmentHTTPHandler interface {
 }
 
 type appointmentHTTPHandlerImpl struct {
-	service service.AppointmentService
+	service         service.AppointmentService
+	event_publisher event.EventPublisher
 }
 
-func NewAppointmentHTTPHandler(service service.AppointmentService) AppointmentHTTPHandler {
+func NewAppointmentHTTPHandler(service service.AppointmentService, event_publisher event.EventPublisher) AppointmentHTTPHandler {
 	return &appointmentHTTPHandlerImpl{
-		service: service,
+		service:         service,
+		event_publisher: event_publisher,
 	}
 }
 
@@ -87,6 +92,19 @@ func (h *appointmentHTTPHandlerImpl) POST(c *gin.Context) {
 		return
 	}
 
+	err = h.event_publisher.AppointmentCreated(
+		event.NewAppointmentCreatedEvent(
+			appointment.ID,
+			appointment.Title,
+			appointment.DoctorID,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[CreateDoctor] event publisher error: %s\n", err.Error())
+	}
+
 	c.JSON(http.StatusOK, appointment)
 }
 
@@ -104,7 +122,17 @@ func (h *appointmentHTTPHandlerImpl) PATCHStatusByID(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateStatus(id, status_bind.Status); err != nil {
+	old_appointment, err := h.service.GetAppointment(id)
+
+	if err != nil || old_appointment == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Appointment is not found"})
+		return
+	}
+
+	old_appointment_status := old_appointment.Status
+	new_appointment_status := status_bind.Status
+
+	if err := h.service.UpdateStatus(id, new_appointment_status); err != nil {
 		status_code := http.StatusInternalServerError
 
 		if err == sql.ErrNoRows {
@@ -113,6 +141,19 @@ func (h *appointmentHTTPHandlerImpl) PATCHStatusByID(c *gin.Context) {
 
 		c.JSON(status_code, gin.H{"error": err.Error()})
 		return
+	}
+
+	err = h.event_publisher.AppointmentStatusUpdated(
+		event.NewAppointmentStatusUpdatedEvent(
+			id,
+			old_appointment_status,
+			new_appointment_status,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[AppointmentStatusUpdated] event publisher error: %s\n", err.Error())
 	}
 
 	c.Status(http.StatusOK)
@@ -130,12 +171,14 @@ func (h *appointmentHTTPHandlerImpl) StatusValidator(fl validator.FieldLevel) bo
 
 type AppointmentGRPCHandler struct {
 	pb.UnimplementedAppointmentServiceServer
-	service service.AppointmentService
+	service         service.AppointmentService
+	event_publisher event.EventPublisher
 }
 
-func NewAppointmentGRPCHandler(service service.AppointmentService) *AppointmentGRPCHandler {
+func NewAppointmentGRPCHandler(service service.AppointmentService, event_publisher event.EventPublisher) *AppointmentGRPCHandler {
 	return &AppointmentGRPCHandler{
-		service: service,
+		service:         service,
+		event_publisher: event_publisher,
 	}
 }
 
@@ -224,6 +267,19 @@ func (h *AppointmentGRPCHandler) CreateAppointment(_ context.Context, in *pb.Cre
 		appointment_status = int32(pb.AppointmentStatus_NEW)
 	}
 
+	err = h.event_publisher.AppointmentCreated(
+		event.NewAppointmentCreatedEvent(
+			appointment.ID,
+			appointment.Title,
+			appointment.DoctorID,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[AppointmentCreated] event publisher error: %s\n", err.Error())
+	}
+
 	return &pb.AppointmentResponse{
 		Id:          appointment.ID,
 		Title:       appointment.Title,
@@ -243,7 +299,16 @@ func (h *AppointmentGRPCHandler) UpdateAppointmentStatus(_ context.Context, in *
 		return nil, status.Error(codes.Unknown, "AppointmentStatus is not found")
 	}
 
-	if err := h.service.UpdateStatus(id, model.Status(appointment_status)); err != nil {
+	old_appointment, err := h.service.GetAppointment(id)
+
+	if err != nil || old_appointment == nil {
+		return nil, status.Error(codes.Unknown, "Appointment is not found")
+	}
+
+	old_appointment_status := old_appointment.Status
+	new_appointment_status := model.Status(appointment_status)
+
+	if err := h.service.UpdateStatus(id, new_appointment_status); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, status.Errorf(codes.NotFound, "Appointment with id %s not found", id)
 		}
@@ -263,6 +328,19 @@ func (h *AppointmentGRPCHandler) UpdateAppointmentStatus(_ context.Context, in *
 		}
 
 		return nil, status.Error(code, err.Error())
+	}
+
+	err = h.event_publisher.AppointmentStatusUpdated(
+		event.NewAppointmentStatusUpdatedEvent(
+			id,
+			old_appointment_status,
+			new_appointment_status,
+			time.Now(),
+		),
+	)
+
+	if err != nil {
+		log.Printf("[AppointmentStatusUpdated] event publisher error: %s\n", err.Error())
 	}
 
 	return &pb.UpdateAppointmentStatusResponse{}, nil

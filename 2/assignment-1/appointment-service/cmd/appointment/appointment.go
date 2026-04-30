@@ -1,13 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"github.com/pythonsogood/ap-assignment1/appointment/cmd/appointment/config"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/database"
+	"github.com/pythonsogood/ap-assignment1/appointment/internal/event"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/handler"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
@@ -17,10 +20,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-func serve_http(server_addr string, appointment_service service.AppointmentService) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
+func serve_http(server_addr string, appointment_service service.AppointmentService, event_publisher event.EventPublisher) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
 	router := gin.Default()
 
-	appointment_handler := handler.NewAppointmentHTTPHandler(appointment_service)
+	appointment_handler := handler.NewAppointmentHTTPHandler(appointment_service, event_publisher)
 
 	if err := http_transport.SetupAppointmentTransport(router, appointment_handler); err != nil {
 		return router, appointment_handler, err
@@ -33,14 +36,14 @@ func serve_http(server_addr string, appointment_service service.AppointmentServi
 	return router, appointment_handler, nil
 }
 
-func serve_grpc(server_addr string, appointment_service service.AppointmentService) (*net.Listener, *handler.AppointmentGRPCHandler, error) {
+func serve_grpc(server_addr string, appointment_service service.AppointmentService, event_publisher event.EventPublisher) (*net.Listener, *handler.AppointmentGRPCHandler, error) {
 	lis, err := net.Listen("tcp", server_addr)
 
 	if err != nil {
 		return &lis, nil, err
 	}
 
-	appointment_handler := handler.NewAppointmentGRPCHandler(appointment_service)
+	appointment_handler := handler.NewAppointmentGRPCHandler(appointment_service, event_publisher)
 
 	s := grpc.NewServer()
 
@@ -70,9 +73,38 @@ func main() {
 		panic("Unsupported database type!")
 	}
 
-	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
+	var appointment_db *sql.DB
+	var event_publisher event.EventPublisher
 
-	appointment_db, err := database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
+	switch conf.Database.Type {
+	case config.DatabaseTypeSQLite:
+		appointment_db, err = database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if err := database.SQLiteInitDB(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
+			panic(err.Error())
+		}
+	default:
+		panic("Unsupported database type!")
+	}
+
+	switch conf.MessageBroker.Type {
+	case config.MessageBrokerTypeNATS:
+		nc, err := nats.Connect(conf.MessageBroker.Nats.ConnectionUrl)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		event_publisher = event.NewNATSEventPublisher(nc)
+	default:
+		panic("Unsupported message broker type!")
+	}
+
+	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
 
 	if err != nil {
 		panic(err.Error())
@@ -93,13 +125,13 @@ func main() {
 
 	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
 
-	// _, _, err = serve_http(server_addr, appointment_service)
+	// _, _, err = serve_http(server_addr, appointment_service, event_publisher)
 
 	// if err != nil {
 	// 	panic(err.Error())
 	// }
 
-	_, _, err = serve_grpc(server_addr, appointment_service)
+	_, _, err = serve_grpc(server_addr, appointment_service, event_publisher)
 
 	if err != nil {
 		panic(err.Error())

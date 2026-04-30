@@ -13,6 +13,12 @@ const (
 	DatabaseTypeSQLite DatabaseType = "sqlite3"
 )
 
+type MessageBrokerType string
+
+const (
+	MessageBrokerTypeNATS MessageBrokerType = "nats"
+)
+
 type doctorServiceConfig struct {
 	Address string `toml:"address" env:"SERVICES_DOCTOR_ADDRESS"`
 	Timeout uint   `toml:"timeout" env:"SERVICES_DOCTOR_TIMEOUT"`
@@ -35,10 +41,20 @@ type databaseConfig struct {
 	Sqlite3 databaseSQLite3Config `toml:"sqlite3"`
 }
 
+type messageBrokerNATSConfig struct {
+	ConnectionUrl string `toml:"connection_url" env:"MESSAGE_BROKER_NATS_CONNECTION_URL"`
+}
+
+type messageBrokerConfig struct {
+	Type MessageBrokerType       `toml:"type" env:"MESSAGE_BROKER_TYPE"`
+	Nats messageBrokerNATSConfig `toml:"nats"`
+}
+
 type Config struct {
-	Services servicesConfig `toml:"services"`
-	Server   serverConfig   `toml:"server"`
-	Database databaseConfig `toml:"database"`
+	Services      servicesConfig      `toml:"services"`
+	Server        serverConfig        `toml:"server"`
+	Database      databaseConfig      `toml:"database"`
+	MessageBroker messageBrokerConfig `toml:"message-broker"`
 }
 
 func ParseConfig(config_path string) (*Config, error) {
@@ -63,7 +79,7 @@ func NewDefaultConfig() (*Config, error) {
 	config_path := os.Getenv("CONFIG_FILE")
 
 	if len(config_path) == 0 {
-		config_path = "./configs/appointment/config.toml"
+		config_path = "./configs/doctor/config.toml"
 	}
 
 	return ParseConfig(config_path)
