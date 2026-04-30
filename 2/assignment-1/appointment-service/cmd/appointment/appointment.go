@@ -106,10 +106,6 @@ func main() {
 
 	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
 
-	if err != nil {
-		panic(err.Error())
-	}
-
 	if err := database.SQLiteInitDB(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
 		panic(err.Error())
 	}
