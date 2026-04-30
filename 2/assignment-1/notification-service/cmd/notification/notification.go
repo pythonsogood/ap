@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -12,10 +13,21 @@ import (
 
 type logWriter struct {
 	time_format string
+	file_path   string
 }
 
 func (lw *logWriter) Write(bs []byte) (int, error) {
-	return fmt.Print(time.Now().UTC().Format(lw.time_format), " | ", string(bs))
+	text := fmt.Sprint(time.Now().UTC().Format(lw.time_format), " | ", string(bs))
+
+	f, err := os.OpenFile(lw.file_path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+
+	if err == nil {
+		defer f.Close()
+
+		f.WriteString(text)
+	}
+
+	return fmt.Print(text)
 }
 
 func main() {
@@ -28,6 +40,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(&logWriter{
 		time_format: time.RFC3339,
+		file_path:   "log.log",
 	})
 
 	var event_subscriber subscriber.EventSubscriber
@@ -49,5 +62,8 @@ func main() {
 		if err := event_subscriber.SubscribeNotification(subj); err != nil {
 			panic(err.Error())
 		}
+	}
+
+	for {
 	}
 }

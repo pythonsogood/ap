@@ -22,7 +22,7 @@ services:
       - "8081:8081"
     restart: unless-stopped
     depends_on:
-      - nats
+      - message-broker-nats
   appointment-service:
     image: appointment-service
     build:
@@ -36,7 +36,7 @@ services:
       - "8082:8082"
     restart: unless-stopped
     depends_on:
-      - nats
+      - message-broker-nats
   notification-service:
     image: notification-service
     build:
@@ -46,7 +46,7 @@ services:
       CONFIG_FILE: config.toml
     restart: unless-stopped
     depends_on:
-      - nats
+      - message-broker-nats
 
 volumes:
   doctor-data:

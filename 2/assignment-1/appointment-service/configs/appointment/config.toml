@@ -10,3 +10,9 @@ type = "sqlite3" # supported: sqlite3
 
 [database.sqlite3]
 source = "./db/appointment.db"
+
+[message-broker]
+type = "nats" # supported: nats
+
+[message-broker.nats]
+connection_url = "message-broker-nats"

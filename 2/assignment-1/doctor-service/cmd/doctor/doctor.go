@@ -71,7 +71,7 @@ func main() {
 
 	switch conf.Database.Type {
 	case config.DatabaseTypeSQLite:
-		doctor_db, err := database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
+		doctor_db, err = database.SQLiteConnectDB(conf.Database.Sqlite3.Source)
 
 		if err != nil {
 			panic(err.Error())

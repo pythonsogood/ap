@@ -6,3 +6,9 @@ type = "sqlite3" # supported: sqlite3
 
 [database.sqlite3]
 source = "./db/doctor.db"
+
+[message-broker]
+type = "nats" # supported: nats
+
+[message-broker.nats]
+connection_url = "localhost:4222"
