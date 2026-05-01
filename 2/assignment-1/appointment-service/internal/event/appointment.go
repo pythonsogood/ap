@@ -29,7 +29,7 @@ func NewAppointmentCreatedEvent(id string, title string, doctor_id string, occur
 
 	return &AppointmentCreatedEvent{
 		EventType:  "appointments.created",
-		OccurredAt: occurred_at.String(),
+		OccurredAt: occurred_at.Format(time.RFC3339),
 		Id:         id,
 		Title:      title,
 		DoctorId:   doctor_id,
@@ -51,8 +51,8 @@ func NewAppointmentStatusUpdatedEvent(id string, old_status model.Status, new_st
 	}
 
 	return &AppointmentStatusUpdatedEvent{
-		EventType:  "appointments.created",
-		OccurredAt: occurred_at.String(),
+		EventType:  "appointments.status_updated",
+		OccurredAt: occurred_at.Format(time.RFC3339),
 		Id:         id,
 		OldStatus:  old_status,
 		NewStatus:  new_status,

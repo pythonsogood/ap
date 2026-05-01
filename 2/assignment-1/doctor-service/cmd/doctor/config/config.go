@@ -10,8 +10,8 @@ import (
 type DatabaseType string
 
 const (
-	DatabaseTypeSQLite     DatabaseType = "sqlite3"
-	DatabaseTypePostgreSQL DatabaseType = "postgresql"
+	DatabaseTypeSQLite   DatabaseType = "sqlite3"
+	DatabaseTypePostgres DatabaseType = "postgres"
 )
 
 type MessageBrokerType string
@@ -28,14 +28,14 @@ type databaseSQLite3Config struct {
 	Source string `toml:"source" env:"DB_SQLITE_SOURCE"`
 }
 
-type databasePostgreSQLConfig struct {
-	ConnectionUrl string `toml:"connection_url" env:"DB_POSTGRESQL_CONNECTION_URL"`
+type databasePostgresConfig struct {
+	ConnectionUrl string `toml:"connection_url" env:"DB_POSTGRES_CONNECTION_URL"`
 }
 
 type databaseConfig struct {
-	Type       DatabaseType             `toml:"type" env:"DB_TYPE"`
-	Sqlite3    databaseSQLite3Config    `toml:"sqlite3"`
-	Postgresql databasePostgreSQLConfig `toml:"postgresql"`
+	Type     DatabaseType           `toml:"type" env:"DB_TYPE"`
+	Sqlite3  databaseSQLite3Config  `toml:"sqlite3"`
+	Postgres databasePostgresConfig `toml:"postgres"`
 }
 
 type messageBrokerNATSConfig struct {

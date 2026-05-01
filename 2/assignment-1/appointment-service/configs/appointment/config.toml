@@ -6,10 +6,13 @@ timeout = 15
 port = 8082
 
 [database]
-type = "sqlite3" # supported: sqlite3
+type = "postgres" # supported: sqlite3, postgres
 
 [database.sqlite3]
 source = "./db/appointment.db"
+
+[database.postgres]
+connection_url = "user=postgres password=1 dbname=appointment sslmode=disable"
 
 [message-broker]
 type = "nats" # supported: nats

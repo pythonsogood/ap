@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -14,6 +18,36 @@ import (
 type logWriter struct {
 	time_format string
 	file_path   string
+}
+
+func connectNATSWithRetry(connectionURL string, maxAttempts int, initialBackoff time.Duration) (*nats.Conn, error) {
+	if maxAttempts <= 0 {
+		maxAttempts = 1
+	}
+
+	if initialBackoff <= 0 {
+		initialBackoff = time.Second
+	}
+
+	backoff := initialBackoff
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		nc, err := nats.Connect(connectionURL)
+
+		if err == nil {
+			return nc, nil
+		}
+
+		if attempt == maxAttempts {
+			return nil, fmt.Errorf("failed to connect to nats after %d attempts: %w", maxAttempts, err)
+		}
+
+		log.Printf("nats unavailable (attempt %d/%d): %v; retrying in %s\n", attempt, maxAttempts, err, backoff)
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+
+	return nil, errors.New("failed to connect to nats")
 }
 
 func (lw *logWriter) Write(bs []byte) (int, error) {
@@ -44,13 +78,14 @@ func main() {
 	})
 
 	var event_subscriber subscriber.EventSubscriber
+	var nc *nats.Conn
 
 	switch conf.MessageBroker.Type {
 	case config.MessageBrokerTypeNATS:
-		nc, err := nats.Connect(conf.MessageBroker.Nats.ConnectionUrl)
+		nc, err = connectNATSWithRetry(conf.MessageBroker.Nats.ConnectionUrl, 5, time.Second)
 
 		if err != nil {
-			panic(err.Error())
+			log.Fatalf("broker unavailable at startup: %s", err.Error())
 		}
 
 		event_subscriber = subscriber.NewNATSEventSubscriber(nc)
@@ -64,6 +99,18 @@ func main() {
 		}
 	}
 
-	for {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+	log.Println("received shutdown signal")
+
+	if nc != nil {
+		if err := nc.Drain(); err != nil {
+			log.Printf("failed to drain nats connection: %s\n", err.Error())
+			nc.Close()
+		}
 	}
+
+	log.Println("notification service stopped")
 }

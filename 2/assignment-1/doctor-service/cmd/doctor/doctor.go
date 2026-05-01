@@ -67,6 +67,7 @@ func main() {
 	}
 
 	var doctor_db *sql.DB
+	var doctor_repo repository.DoctorRepository
 	var event_publisher event.EventPublisher
 
 	switch conf.Database.Type {
@@ -77,9 +78,23 @@ func main() {
 			panic(err.Error())
 		}
 
-		if err := database.SQLiteInitDB(doctor_db, []database.Model{&model.Doctor{}}); err != nil {
+		if err := database.SqlInitModels(doctor_db, []database.Model{&model.Doctor{}}); err != nil {
 			panic(err.Error())
 		}
+
+		doctor_repo = repository.NewSQLiteDoctorRepository(doctor_db)
+	case config.DatabaseTypePostgres:
+		doctor_db, err = database.PostgresConnectDB(conf.Database.Postgres.ConnectionUrl)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if err := database.SqlInitModels(doctor_db, []database.Model{&model.Doctor{}}); err != nil {
+			panic(err.Error())
+		}
+
+		doctor_repo = repository.NewPostgresDoctorRepository(doctor_db)
 	default:
 		panic("Unsupported database type!")
 	}
@@ -99,7 +114,6 @@ func main() {
 
 	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
 
-	doctor_repo := repository.NewSQLiteDoctorRepository(doctor_db)
 	doctor_service := service.NewDoctorService(doctor_repo)
 
 	// _, _, err = serve_http(server_addr, doctor_service, event_publisher)

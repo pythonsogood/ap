@@ -15,17 +15,3 @@ func SQLiteConnectDB(dataSourceName string) (*sql.DB, error) {
 
 	return db, nil
 }
-
-func SQLiteInitDB(db *sql.DB, models []Model) error {
-	for _, model := range models {
-		query := model.TableCreateQuery()
-
-		_, err := db.Exec(query)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}

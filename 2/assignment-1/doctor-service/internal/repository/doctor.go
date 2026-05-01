@@ -91,3 +91,83 @@ func (r *SQLiteDoctorRepository) Insert(doctor *model.Doctor) error {
 
 	return nil
 }
+
+type PostgresDoctorRepository struct {
+	db *sql.DB
+}
+
+func NewPostgresDoctorRepository(db *sql.DB) DoctorRepository {
+	return &PostgresDoctorRepository{
+		db: db,
+	}
+}
+
+func (r *PostgresDoctorRepository) FindByID(ID string) (*model.Doctor, error) {
+	statement, err := r.db.Prepare("SELECT id, full_name, specialization, email FROM doctors WHERE id = $1")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer statement.Close()
+
+	var id, full_name, specialization, email string
+
+	if err := statement.QueryRow(ID).Scan(&id, &full_name, &specialization, &email); err != nil {
+		return nil, err
+	}
+
+	return &model.Doctor{
+		ID:             id,
+		FullName:       full_name,
+		Specialization: specialization,
+		Email:          email,
+	}, nil
+}
+
+func (r *PostgresDoctorRepository) All() ([]*model.Doctor, error) {
+	rows, err := r.db.Query("SELECT id, full_name, specialization, email FROM doctors")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	doctors := make([]*model.Doctor, 0)
+
+	for rows.Next() {
+		var id, full_name, specialization, email string
+
+		if err := rows.Scan(&id, &full_name, &specialization, &email); err == nil {
+			doctor := &model.Doctor{
+				ID:             id,
+				FullName:       full_name,
+				Specialization: specialization,
+				Email:          email,
+			}
+
+			doctors = append(doctors, doctor)
+		}
+	}
+
+	return doctors, nil
+}
+
+func (r *PostgresDoctorRepository) Insert(doctor *model.Doctor) error {
+	statement, err := r.db.Prepare("INSERT INTO doctors(id, full_name, specialization, email) VALUES($1, $2, $3, $4)")
+
+	if err != nil {
+		return err
+	}
+
+	defer statement.Close()
+
+	_, err = statement.Exec(doctor.ID, doctor.FullName, doctor.Specialization, doctor.Email)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

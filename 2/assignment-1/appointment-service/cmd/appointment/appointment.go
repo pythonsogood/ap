@@ -67,13 +67,8 @@ func main() {
 		panic(err.Error())
 	}
 
-	switch conf.Database.Type {
-	case config.DatabaseTypeSQLite:
-	default:
-		panic("Unsupported database type!")
-	}
-
 	var appointment_db *sql.DB
+	var appointment_repo repository.AppointmentRepository
 	var event_publisher event.EventPublisher
 
 	switch conf.Database.Type {
@@ -84,9 +79,23 @@ func main() {
 			panic(err.Error())
 		}
 
-		if err := database.SQLiteInitDB(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
+		if err := database.SqlInitModels(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
 			panic(err.Error())
 		}
+
+		appointment_repo = repository.NewSQLiteAppointmentRepository(appointment_db)
+	case config.DatabaseTypePostgres:
+		appointment_db, err = database.PostgresConnectDB(conf.Database.Postgres.ConnectionUrl)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if err := database.SqlInitModels(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
+			panic(err.Error())
+		}
+
+		appointment_repo = repository.NewPostgresAppointmentRepository(appointment_db)
 	default:
 		panic("Unsupported database type!")
 	}
@@ -105,12 +114,6 @@ func main() {
 	}
 
 	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
-
-	if err := database.SQLiteInitDB(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
-		panic(err.Error())
-	}
-
-	appointment_repo := repository.NewSQLiteAppointmentRepository(appointment_db)
 
 	// http_client := http.Client{
 	// 	Timeout: time.Duration(conf.Services.Doctor.Timeout*time.Second),

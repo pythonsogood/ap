@@ -1,24 +1,23 @@
 services:
   message-broker-nats:
-    image: nats:scratch
+    image: nats:alpine
     command: "-c /etc/nats/nats.conf"
     restart: unless-stopped
-    ports:
-      - "4222:4222" # client
-      - "6222:6222" # cluster
-      - "8222:8222" # monitor
     volumes:
       - ./nats/nats.conf:/etc/nats/nats.conf
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8222/healthz" ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   doctor-service-postgres:
     image: postgres:latest
-    container_name: postgres_container
     environment:
       POSTGRES_USER: ${DOCTOR_SERVICE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${DOCTOR_SERVICE_POSTGRES_PASSWORD}
       POSTGRES_DB: ${DOCTOR_SERVICE_POSTGRES_DB}
       PGDATA : /var/lib/postgresql/docker
-    ports:
-      - "${DOCTOR_SERVICE_POSTGRES_PORT}:5432"
     volumes:
       - doctor-postgres-data:/var/lib/postgresql
     healthcheck:
@@ -35,14 +34,32 @@ services:
     environment:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      DB_POSTGRES_CONNECTION_URL: "host=doctor-service-postgres port=5432 user=${DOCTOR_SERVICE_POSTGRES_USER} password=${DOCTOR_SERVICE_POSTGRES_PASSWORD} dbname=${DOCTOR_SERVICE_POSTGRES_DB} sslmode=disable"
     volumes:
       - doctor-data:/app/db
     ports:
       - "8081:8081"
     restart: unless-stopped
     depends_on:
-      - doctor-service-postgres
-      - message-broker-nats
+      doctor-service-postgres:
+        condition: service_healthy
+      message-broker-nats:
+        condition: service_healthy
+  appointment-service-postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${APPOINTMENT_SERVICE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${APPOINTMENT_SERVICE_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${APPOINTMENT_SERVICE_POSTGRES_DB}
+      PGDATA : /var/lib/postgresql/docker
+    volumes:
+      - appointment-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
   appointment-service:
     image: appointment-service
     build:
@@ -51,6 +68,7 @@ services:
     environment:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      DB_POSTGRES_CONNECTION_URL: "host=appointment-service-postgres port=5432 user=${APPOINTMENT_SERVICE_POSTGRES_USER} password=${APPOINTMENT_SERVICE_POSTGRES_PASSWORD} dbname=${APPOINTMENT_SERVICE_POSTGRES_DB} sslmode=disable"
       SERVICES_DOCTOR_ADDRESS: ${DOCTOR_SERVICE_ADDRESS}
     volumes:
       - appointment-data:/app/db
@@ -58,7 +76,8 @@ services:
       - "8082:8082"
     restart: unless-stopped
     depends_on:
-      - message-broker-nats
+      message-broker-nats:
+        condition: service_healthy
   notification-service:
     image: notification-service
     build:
@@ -72,7 +91,8 @@ services:
       - notification-logs:/app/${NOTIFICATION_SERVICE_LOG_DIRECTORY}
     restart: unless-stopped
     depends_on:
-      - message-broker-nats
+      message-broker-nats:
+        condition: service_healthy
 
 volumes:
   doctor-data:
@@ -80,6 +100,8 @@ volumes:
   doctor-postgres-data:
     driver: local
   appointment-data:
+    driver: local
+  appointment-postgres-data:
     driver: local
   notification-logs:
     driver: local

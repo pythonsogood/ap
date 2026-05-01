@@ -27,7 +27,7 @@ func NewDoctorCreatedEvent(doctor_id string, full_name string, specialization st
 
 	return &DoctorCreatedEvent{
 		EventType:      "doctors.created",
-		OccurredAt:     occurred_at.String(),
+		OccurredAt:     occurred_at.Format(time.RFC3339),
 		DoctorId:       doctor_id,
 		FullName:       full_name,
 		Specialization: specialization,
