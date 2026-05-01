@@ -8,3 +8,6 @@ logged_subjects = [
 
 [message-broker.nats]
 connection_url = "localhost:4222"
+
+[log]
+file = "./logs/log.log"

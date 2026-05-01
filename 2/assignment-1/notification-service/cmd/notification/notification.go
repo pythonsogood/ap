@@ -40,7 +40,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(&logWriter{
 		time_format: time.RFC3339,
-		file_path:   "log.log",
+		file_path:   conf.Log.File,
 	})
 
 	var event_subscriber subscriber.EventSubscriber

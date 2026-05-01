@@ -9,6 +9,24 @@ services:
       - "8222:8222" # monitor
     volumes:
       - ./nats/nats.conf:/etc/nats/nats.conf
+  doctor-service-postgres:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: ${DOCTOR_SERVICE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DOCTOR_SERVICE_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DOCTOR_SERVICE_POSTGRES_DB}
+      PGDATA : /var/lib/postgresql/docker
+    ports:
+      - "${DOCTOR_SERVICE_POSTGRES_PORT}:5432"
+    volumes:
+      - doctor-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
   doctor-service:
     image: doctor-service
     build:
@@ -16,12 +34,14 @@ services:
       dockerfile: ./doctor-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
+      MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
     volumes:
       - doctor-data:/app/db
     ports:
       - "8081:8081"
     restart: unless-stopped
     depends_on:
+      - doctor-service-postgres
       - message-broker-nats
   appointment-service:
     image: appointment-service
@@ -30,6 +50,8 @@ services:
       dockerfile: ./appointment-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
+      MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      SERVICES_DOCTOR_ADDRESS: ${DOCTOR_SERVICE_ADDRESS}
     volumes:
       - appointment-data:/app/db
     ports:
@@ -44,6 +66,10 @@ services:
       dockerfile: ./notification-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
+      MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      LOG_FILE: ${NOTIFICATION_SERVICE_LOG_DIRECTORY}/${NOTIFICATION_SERVICE_LOG_FILE}
+    volumes:
+      - notification-logs:/app/${NOTIFICATION_SERVICE_LOG_DIRECTORY}
     restart: unless-stopped
     depends_on:
       - message-broker-nats
@@ -51,5 +77,9 @@ services:
 volumes:
   doctor-data:
     driver: local
+  doctor-postgres-data:
+    driver: local
   appointment-data:
+    driver: local
+  notification-logs:
     driver: local

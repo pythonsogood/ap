@@ -23,8 +23,13 @@ type messageBrokerConfig struct {
 	Nats           messageBrokerNATSConfig `toml:"nats"`
 }
 
+type logConfig struct {
+	File string `toml:"file" env:"LOG_FILE"`
+}
+
 type Config struct {
 	MessageBroker messageBrokerConfig `toml:"message-broker"`
+	Log           logConfig           `toml:"log"`
 }
 
 func ParseConfig(config_path string) (*Config, error) {
