@@ -1,6 +1,6 @@
-# Assignment 2 - gRPC Migration
+# Assignment 3 - Message Queue & Database Migrations
 
-> small 2-service platform composed of a **Doctor Service** and an **Appointment Service**
+> small 3-service platform composed of a **Doctor Service**, an **Appointment Service**, and a **Notification Service**
 
 ## License
 
@@ -11,8 +11,8 @@
 ### Technology Stack
 - Language: Go 1.26
 - Framework: gRPC
-- Database: SQLite3
-- Configuration: TOML
+- Database: PostgreSQL
+- Configuration: TOML / Environment Variables
 
 ### Architecture Diagram
 ![architecture diagram](/2/assignment-1/assets/architecture-diagram-grpc.svg)
@@ -92,30 +92,37 @@
 │   │   └───appointment
 │   │           config.toml
 │   │
-│   └───internal
-│       ├───database
-│       │       model.go
-│       │       sqlite.go
-│       │
-│       ├───handler
-│       │       appointment.go
-│       │
-│       ├───model
-│       │       appointment.go
-│       │
-│       ├───repository
-│       │       appointment.go
-│       │
-│       ├───service
-│       │       appointment.go
-│       │       doctor_service.go
-│       │
-│       └───transport
-│           ├───grpc
-│           │       appointment.go
-│           │
-│           └───http
-│                   appointment.go
+│   ├───internal
+│   │   ├───database
+│   │   │       postgres.go
+│   │   │       sqlite.go
+│   │   │
+│   │   ├───event
+│   │   │       appointment.go
+│   │   │
+│   │   ├───handler
+│   │   │       appointment.go
+│   │   │
+│   │   ├───model
+│   │   │       appointment.go
+│   │   │
+│   │   ├───repository
+│   │   │       appointment.go
+│   │   │
+│   │   ├───service
+│   │   │       appointment.go
+│   │   │       doctor_service.go
+│   │   │
+│   │   └───transport
+│   │       ├───grpc
+│   │       │       appointment.go
+│   │       │
+│   │       └───http
+│   │               appointment.go
+│   │
+│   └───migrations
+│           000001_create_appointments.down.sql
+│           000001_create_appointments.up.sql
 │
 ├───doctor-service
 │   │   .dockerignore
@@ -134,42 +141,64 @@
 │   │   └───doctor
 │   │           config.toml
 │   │
+│   ├───internal
+│   │   ├───database
+│   │   │       postgres.go
+│   │   │       sqlite.go
+│   │   │
+│   │   ├───event
+│   │   │       doctor.go
+│   │   │
+│   │   ├───handler
+│   │   │       doctor.go
+│   │   │
+│   │   ├───model
+│   │   │       doctor.go
+│   │   │
+│   │   ├───repository
+│   │   │       doctor.go
+│   │   │
+│   │   ├───service
+│   │   │       doctor.go
+│   │   │
+│   │   └───transport
+│   │       ├───grpc
+│   │       │       doctor.go
+│   │       │
+│   │       └───http
+│   │               doctor.go
+│   │
+│   └───migrations
+│           000001_create_doctors.down.sql
+│           000001_create_doctors.up.sql
+│
+├───nats
+│       nats.conf
+│
+├───notification-service
+│   │   .dockerignore
+│   │   Dockerfile
+│   │   go.mod
+│   │   go.sum
+│   │
+│   ├───cmd
+│   │   └───notification
+│   │       │   notification.go
+│   │       │
+│   │       └───config
+│   │               config.go
+│   │
+│   ├───configs
+│   │   └───notification
+│   │           config.toml
+│   │
 │   └───internal
-│       ├───database
-│       │       model.go
-│       │       sqlite.go
-│       │
-│       ├───handler
-│       │       doctor.go
-│       │
-│       ├───model
-│       │       doctor.go
-│       │
-│       ├───repository
-│       │       doctor.go
-│       │
-│       ├───service
-│       │       doctor.go
-│       │
-│       └───transport
-│           ├───grpc
-│           │       doctor.go
-│           │
-│           └───http
-│                   doctor.go
+│       └───subscriber
+│               notification.go
 │
 └───proto
-    │   appointment.proto
-    │   doctor.proto
-    │
-    └───go
-        └───proto
-                appointment.pb.go
-                appointment_grpc.pb.go
-                doctor.pb.go
-                doctor_grpc.pb.go
-                go.mod
-                go.sum
+        appointment.proto
+        doctor.proto
 ```
 
 ## Dependency Flow
