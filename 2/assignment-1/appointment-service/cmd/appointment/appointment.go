@@ -12,12 +12,15 @@ import (
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/database"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/event"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/handler"
-	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
 	grpc_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/grpc"
 	http_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
 	"google.golang.org/grpc"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func serve_http(server_addr string, appointment_service service.AppointmentService, event_publisher event.EventPublisher) (*gin.Engine, handler.AppointmentHTTPHandler, error) {
@@ -79,19 +82,24 @@ func main() {
 			panic(err.Error())
 		}
 
-		if err := database.SqlInitModels(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
-			panic(err.Error())
-		}
-
 		appointment_repo = repository.NewSQLiteAppointmentRepository(appointment_db)
 	case config.DatabaseTypePostgres:
-		appointment_db, err = database.PostgresConnectDB(conf.Database.Postgres.ConnectionUrl)
+		m, err := migrate.New(
+			"file://migrations",
+			fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", conf.Database.Postgres.User, conf.Database.Postgres.Password, conf.Database.Postgres.Host, conf.Database.Postgres.Port, conf.Database.Postgres.Db),
+		)
 
 		if err != nil {
 			panic(err.Error())
 		}
 
-		if err := database.SqlInitModels(appointment_db, []database.Model{&model.Appointment{}}); err != nil {
+		if err := m.Up(); err != nil && err.Error() != "no change" {
+			panic(err.Error())
+		}
+
+		appointment_db, err = database.PostgresConnectDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conf.Database.Postgres.Host, conf.Database.Postgres.Port, conf.Database.Postgres.User, conf.Database.Postgres.Password, conf.Database.Postgres.Db))
+
+		if err != nil {
 			panic(err.Error())
 		}
 

@@ -29,7 +29,11 @@ type databaseSQLite3Config struct {
 }
 
 type databasePostgresConfig struct {
-	ConnectionUrl string `toml:"connection_url" env:"DB_POSTGRES_CONNECTION_URL"`
+	Host     string `toml:"host" env:"DB_POSTGRES_HOST"`
+	Port     uint   `toml:"port" env:"DB_POSTGRES_PORT"`
+	User     string `toml:"user" env:"DB_POSTGRES_USER"`
+	Password string `toml:"password" env:"DB_POSTGRES_PASSWORD"`
+	Db       string `toml:"db" env:"DB_POSTGRES_DB"`
 }
 
 type databaseConfig struct {

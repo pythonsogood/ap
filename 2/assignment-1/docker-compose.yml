@@ -34,7 +34,11 @@ services:
     environment:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
-      DB_POSTGRES_CONNECTION_URL: "host=doctor-service-postgres port=5432 user=${DOCTOR_SERVICE_POSTGRES_USER} password=${DOCTOR_SERVICE_POSTGRES_PASSWORD} dbname=${DOCTOR_SERVICE_POSTGRES_DB} sslmode=disable"
+      DB_POSTGRES_HOST: "doctor-service-postgres"
+      DB_POSTGRES_PORT: 5432
+      DB_POSTGRES_USER: ${DOCTOR_SERVICE_POSTGRES_USER}
+      DB_POSTGRES_PASSWORD: ${DOCTOR_SERVICE_POSTGRES_PASSWORD}
+      DB_POSTGRES_DB: ${DOCTOR_SERVICE_POSTGRES_DB}
     volumes:
       - doctor-data:/app/db
     ports:
@@ -68,7 +72,11 @@ services:
     environment:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
-      DB_POSTGRES_CONNECTION_URL: "host=appointment-service-postgres port=5432 user=${APPOINTMENT_SERVICE_POSTGRES_USER} password=${APPOINTMENT_SERVICE_POSTGRES_PASSWORD} dbname=${APPOINTMENT_SERVICE_POSTGRES_DB} sslmode=disable"
+      DB_POSTGRES_HOST: "appointment-service-postgres"
+      DB_POSTGRES_PORT: 5432
+      DB_POSTGRES_USER: ${APPOINTMENT_SERVICE_POSTGRES_USER}
+      DB_POSTGRES_PASSWORD: ${APPOINTMENT_SERVICE_POSTGRES_PASSWORD}
+      DB_POSTGRES_DB: ${APPOINTMENT_SERVICE_POSTGRES_DB}
       SERVICES_DOCTOR_ADDRESS: ${DOCTOR_SERVICE_ADDRESS}
     volumes:
       - appointment-data:/app/db
@@ -76,6 +84,8 @@ services:
       - "8082:8082"
     restart: unless-stopped
     depends_on:
+      appointment-service-postgres:
+        condition: service_healthy
       message-broker-nats:
         condition: service_healthy
   notification-service:

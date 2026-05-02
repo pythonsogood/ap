@@ -11,12 +11,15 @@ import (
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/database"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/event"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
-	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 	grpc_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/grpc"
 	http_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/http"
 	"google.golang.org/grpc"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func serve_http(server_addr string, doctor_service service.DoctorService, event_publisher event.EventPublisher) (*gin.Engine, handler.DoctorHTTPHandler, error) {
@@ -78,19 +81,24 @@ func main() {
 			panic(err.Error())
 		}
 
-		if err := database.SqlInitModels(doctor_db, []database.Model{&model.Doctor{}}); err != nil {
-			panic(err.Error())
-		}
-
 		doctor_repo = repository.NewSQLiteDoctorRepository(doctor_db)
 	case config.DatabaseTypePostgres:
-		doctor_db, err = database.PostgresConnectDB(conf.Database.Postgres.ConnectionUrl)
+		m, err := migrate.New(
+			"file://migrations",
+			fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", conf.Database.Postgres.User, conf.Database.Postgres.Password, conf.Database.Postgres.Host, conf.Database.Postgres.Port, conf.Database.Postgres.Db),
+		)
 
 		if err != nil {
 			panic(err.Error())
 		}
 
-		if err := database.SqlInitModels(doctor_db, []database.Model{&model.Doctor{}}); err != nil {
+		if err := m.Up(); err != nil && err.Error() != "no change" {
+			panic(err.Error())
+		}
+
+		doctor_db, err = database.PostgresConnectDB(fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conf.Database.Postgres.Host, conf.Database.Postgres.Port, conf.Database.Postgres.User, conf.Database.Postgres.Password, conf.Database.Postgres.Db))
+
+		if err != nil {
 			panic(err.Error())
 		}
 

@@ -14,5 +14,6 @@ FROM scratch
 WORKDIR /app
 COPY --from=builder /build/app/doctor /app/doctor
 COPY ./doctor-service/configs/doctor/config.toml /app/config.toml
+COPY ./doctor-service/migrations /app/migrations
 
 CMD ["./doctor"]

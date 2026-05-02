@@ -8,7 +8,11 @@ type = "postgres" # supported: sqlite3, postgres
 source = "./db/doctor.db"
 
 [database.postgres]
-connection_url = "user=postgres password=1 dbname=doctor sslmode=disable"
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "1"
+db = "doctor"
 
 [message-broker]
 type = "nats" # supported: nats

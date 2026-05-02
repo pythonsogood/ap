@@ -14,5 +14,6 @@ FROM scratch
 WORKDIR /app
 COPY --from=builder /build/app/appointment /app/appointment
 COPY ./appointment-service/configs/appointment/config.toml /app/config.toml
+COPY ./appointment-service/migrations /app/migrations
 
 CMD ["./appointment"]

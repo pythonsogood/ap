@@ -219,7 +219,7 @@ func (h *AppointmentGRPCHandler) GetAppointments(_ context.Context, in *pb.GetAp
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	appointments_response := make([]*pb.AppointmentResponse, len(appointments))
+	appointments_response := make([]*pb.AppointmentResponse, 0)
 
 	for _, appointment := range appointments {
 		appointment_status, ok := pb.AppointmentStatus_value[strings.ToUpper(string(appointment.Status))]

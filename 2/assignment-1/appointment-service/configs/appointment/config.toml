@@ -12,7 +12,11 @@ type = "postgres" # supported: sqlite3, postgres
 source = "./db/appointment.db"
 
 [database.postgres]
-connection_url = "user=postgres password=1 dbname=appointment sslmode=disable"
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "1"
+db = "appointment"
 
 [message-broker]
 type = "nats" # supported: nats
