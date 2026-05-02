@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
+	"strings"
 
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 )
@@ -86,6 +88,10 @@ func (r *SQLiteDoctorRepository) Insert(doctor *model.Doctor) error {
 	_, err = statement.Exec(doctor.ID, doctor.FullName, doctor.Specialization, doctor.Email)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed: doctors.email") {
+			return errors.New("email already exists")
+		}
+
 		return err
 	}
 
@@ -166,6 +172,10 @@ func (r *PostgresDoctorRepository) Insert(doctor *model.Doctor) error {
 	_, err = statement.Exec(doctor.ID, doctor.FullName, doctor.Specialization, doctor.Email)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"doctors_email_key\"") {
+			return errors.New("email already exists")
+		}
+
 		return err
 	}
 

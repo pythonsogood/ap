@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -171,7 +170,7 @@ func (h *DoctorGRPCHandler) CreateDoctor(_ context.Context, in *pb.CreateDoctorR
 	if err != nil {
 		code := codes.Internal
 
-		if strings.Contains(err.Error(), "UNIQUE constraint failed: doctors.email") {
+		if err.Error() == "email already exists" {
 			code = codes.AlreadyExists
 		}
 
