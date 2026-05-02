@@ -14,8 +14,18 @@
 - Database: PostgreSQL
 - Configuration: TOML / Environment Variables
 
-### Architecture Diagram
-![architecture diagram](/2/assignment-1/assets/architecture-diagram-grpc.svg)
+### What Changed from Assignment 2
+
+- Database: ~~SQLite~~ -> PostgreSQL
+- SQL migrations (`golang-migrate`) for both services
+- Event publishing after successful writes
+- Notification service that subscribes to events and logs structured sJSON
+
+### Broker Choice
+
+Chosen broker: **NATS Core**.
+
+Why: simple local setup and low overhead.
 
 ## Service Responsibilities
 
@@ -32,224 +42,24 @@
 - Update appointment status
 - Validate doctor existence via Doctor Service gRPC
 
-## Proto Contract Description
+### Notification Service
 
-### Doctor Service (doctor.proto)
+- Connect to broker on startup.
+- Retry broker connection with exponential backoff if unavailable.
+- Subscribe to:
+  - `doctors.created`
+  - `appointments.created`
+  - `appointments.status_updated`
+- On each message, deserialize JSON and log one structured JSON message
 
-| RPC | Request | Response | Business Rule |
-|-----|---------|----------|---------------|
-| `GetDoctor` | `GetDoctorRequest { string id }` | `DoctorResponse { id, full_name, specialization, email }` | Returns doctor by ID, returns NotFound if not exists |
-| `GetDoctors` | `GetDoctorsRequest {}` | `GetDoctorsResponse { repeated DoctorResponse doctors }` | Returns all doctors |
-| `CreateDoctor` | `CreateDoctorRequest { full_name, specialization, email }` | `DoctorResponse` | Creates doctor, enforces unique email constraint |
+## Environment Variables
 
-### Appointment Service (appointment.proto)
-
-| RPC | Request | Response | Business Rule |
-|-----|---------|----------|---------------|
-| `GetAppointment` | `GetAppointmentRequest { string id }` | `AppointmentResponse` | Returns appointment by ID, returns NotFound if not exists |
-| `GetAppointments` | `GetAppointmentsRequest {}` | `GetAppointmentsResponse { repeated AppointmentResponse }` | Returns all appointments |
-| `CreateAppointment` | `CreateAppointmentRequest { title, description, doctor_id }` | `AppointmentResponse` | Validates doctor_id via Doctor Service gRPC before creation |
-| `UpdateAppointmentStatus` | `UpdateAppointmentStatusRequest { id, status }` | `UpdateAppointmentStatusResponse` | Updates status (NEW -> IN_PROGRESS -> DONE) |
-
-**AppointmentStatus Enum:**
-- `NEW` (0): Initial state when created
-- `IN_PROGRESS` (1): Appointment is being conducted
-- `DONE` (2): Appointment completed
-
-## REST vs gRPC Trade-offs
-
-| Aspect | REST | gRPC | When to Choose |
-|--------|------|------|----------------|
-| **Protocol** | HTTP/1.1 + JSON | HTTP/2 + Protocol Buffers | gRPC for performance, REST for browser compatibility |
-| **Contract** | OpenAPI/Swagger (manual) | .proto files (code-generated) | gRPC for strong typing, REST for flexibility |
-| **Code Generation** | Manual implementation | Auto-generated | gRPC for faster development, REST for more control |
-| **Streaming** | requires WebSockets | Native | gRPC for real-time, REST for simpler use cases |
-| **Browser Support** | Universal | Limited | REST for web clients, gRPC for internal services |
-
-### Why gRPC for this project?
-- Strong typing with Protocol Buffers reduces runtime errors
-- Code generation ensures client/server contracts stay in sync
-- HTTP/2 provides better performance
-- Smaller payload sizes
-
-## Folder Structure
-
-```
-┌───appointment-service
-│   │   .dockerignore
-│   │   Dockerfile
-│   │   go.mod
-│   │   go.sum
-│   │
-│   ├───cmd
-│   │   └───appointment
-│   │       │   appointment.go
-│   │       │
-│   │       └───config
-│   │               config.go
-│   │
-│   ├───configs
-│   │   └───appointment
-│   │           config.toml
-│   │
-│   ├───internal
-│   │   ├───database
-│   │   │       postgres.go
-│   │   │       sqlite.go
-│   │   │
-│   │   ├───event
-│   │   │       appointment.go
-│   │   │
-│   │   ├───handler
-│   │   │       appointment.go
-│   │   │
-│   │   ├───model
-│   │   │       appointment.go
-│   │   │
-│   │   ├───repository
-│   │   │       appointment.go
-│   │   │
-│   │   ├───service
-│   │   │       appointment.go
-│   │   │       doctor_service.go
-│   │   │
-│   │   └───transport
-│   │       ├───grpc
-│   │       │       appointment.go
-│   │       │
-│   │       └───http
-│   │               appointment.go
-│   │
-│   └───migrations
-│           000001_create_appointments.down.sql
-│           000001_create_appointments.up.sql
-│
-├───doctor-service
-│   │   .dockerignore
-│   │   Dockerfile
-│   │   go.mod
-│   │   go.sum
-│   │
-│   ├───cmd
-│   │   └───doctor
-│   │       │   doctor.go
-│   │       │
-│   │       └───config
-│   │               config.go
-│   │
-│   ├───configs
-│   │   └───doctor
-│   │           config.toml
-│   │
-│   ├───internal
-│   │   ├───database
-│   │   │       postgres.go
-│   │   │       sqlite.go
-│   │   │
-│   │   ├───event
-│   │   │       doctor.go
-│   │   │
-│   │   ├───handler
-│   │   │       doctor.go
-│   │   │
-│   │   ├───model
-│   │   │       doctor.go
-│   │   │
-│   │   ├───repository
-│   │   │       doctor.go
-│   │   │
-│   │   ├───service
-│   │   │       doctor.go
-│   │   │
-│   │   └───transport
-│   │       ├───grpc
-│   │       │       doctor.go
-│   │       │
-│   │       └───http
-│   │               doctor.go
-│   │
-│   └───migrations
-│           000001_create_doctors.down.sql
-│           000001_create_doctors.up.sql
-│
-├───nats
-│       nats.conf
-│
-├───notification-service
-│   │   .dockerignore
-│   │   Dockerfile
-│   │   go.mod
-│   │   go.sum
-│   │
-│   ├───cmd
-│   │   └───notification
-│   │       │   notification.go
-│   │       │
-│   │       └───config
-│   │               config.go
-│   │
-│   ├───configs
-│   │   └───notification
-│   │           config.toml
-│   │
-│   └───internal
-│       └───subscriber
-│               notification.go
-│
-└───proto
-        appointment.proto
-        doctor.proto
-```
-
-## Dependency Flow
-![dependency flow](/2/assignment-1/assets/dependency-flow-grpc.svg)
-
-## Inter-Service Communication
-
-### How Appointment Service Validates Doctor
-
-The Appointment Service calls the Doctor Service via gRPC to validate that a doctor exists before creating an appointment.
-
-**gRPC Contract:**
-- Service: `DoctorService`
-- Method: `GetDoctor(GetDoctorRequest) returns (DoctorResponse)`
-- Timeout: `15 seconds`
-
-Implementation ([appointment-service/internal/service/doctor_service.go](/2/assignment-1/appointment-service/internal/service/doctor_service.go)):
-```go
-func (s grpcDoctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
-	conn, err := grpc.NewClient(s.doctor_service_address, grpc.WithTransportCredentials(insecure.NewBundle().TransportCredentials()))
-
-	if err != nil {
-		return false, err
-	}
-
-	defer conn.Close()
-
-	client := pb.NewDoctorServiceClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
-	defer cancel()
-
-	_, err = client.GetDoctor(ctx, &pb.GetDoctorRequest{
-		Id: doctor_id,
-	})
-
-	if err != nil {
-		if strings.Contains(err.Error(), "code = NotFound") {
-			return false, nil
-		}
-
-		return false, fmt.Errorf("[ERROR] Doctors service is currently unavailable\nError: %s", err.Error())
-	}
-
-	return true, nil
-}
-```
-
-**Error Handling:**
-- If doctor not found (`NotFound`): returns `false, nil` -> appointment creation fails with validation error
-- If service unavailable: returns error with `Unavailable` status -> appointment creation fails
+| Service | Environment variables |
+|---------|-----------------------|
+| Shared | `NATS_CONNECTION_URL` -> `MESSAGE_BROKER_NATS_CONNECTION_URL` |
+| Doctor | `DOCTOR_SERVICE_POSTGRES_USER` -> `DB_POSTGRES_USER`, `DOCTOR_SERVICE_POSTGRES_PASSWORD` -> `DB_POSTGRES_PASSWORD`, `DOCTOR_SERVICE_POSTGRES_DB` -> `DB_POSTGRES_DB`, `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT` |
+| Appointment | `APPOINTMENT_SERVICE_POSTGRES_USER` -> `DB_POSTGRES_USER`, `APPOINTMENT_SERVICE_POSTGRES_PASSWORD` -> `DB_POSTGRES_PASSWORD`, `APPOINTMENT_SERVICE_POSTGRES_DB` -> `DB_POSTGRES_DB`, `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT`, `DOCTOR_SERVICE_ADDRESS` -> `SERVICES_DOCTOR_ADDRESS`, `DOCTOR_SERVICE_TIMEOUT` -> `SERVICES_DOCTOR_TIMEOUT` |
+| Notification | `NOTIFICATION_SERVICE_LOG_DIRECTORY` `NOTIFICATION_SERVICE_LOG_FILE` -> `LOG_FILE` |
 
 ## How to Run the Project
 
@@ -257,43 +67,61 @@ func (s grpcDoctorServiceImpl) IsValidDoctorId(doctor_id string) (bool, error) {
 docker compose up --build
 ```
 
-This will start both services:
-- Doctor Service: localhost:8081
-- Appointment Service: localhost:8082
+## Migrations
 
-## Why Separate Databases
+Migrations run automatically on service startup before gRPC server starts.
 
-Each service owns its data independently:
-- Doctor Service owns the `doctors` table
-- Appointment Service owns the `appointments` table
+Migration files:
+- `doctor-service/migrations/`
+  - `000001_create_doctors.up.sql`
+  - `000001_create_doctors.down.sql`
+- `appointment-service/migrations/`
+  - `000001_create_appointments.up.sql`
+  - `000001_create_appointments.down.sql`
 
-Pros of separate databases:
-- Encapsulation: each service's data is only accessible through its gRPC
-- Independence: services can develop independently
+## Startup Order
 
-### Why Not a Shared Database?
+Using Docker Compose, dependencies and healthchecks are configured.
 
-A shared database would create a distributed monolith:
-- Changes to one service's data model could break the other
-- Tight coupling between services
+NATS broker and PostgreSQL instances launch first
+Notification service depends on NATS broker, starts after the broker
+Doctor and Appointment services depends on both NATS broker and their PostgreSQL databases, starts after the broker and a own db
 
-## Failure Scenario
+## Event Contract
 
-### When Doctor Service is Unavailable
+Published events are JSON with at least `event_type`, `occurred_at`, and payload fields.
 
-If the Doctor Service is unreachable when creating/updating an appointment:
+| Subject | Publisher | Trigger | Fields |
+|---------|-----------|---------|--------|
+| `doctors.created` | `doctor-service` | `CreateDoctor` | `event_type`, `occurred_at`, `id`, `full_name`, `specialization`, `email` |
+| `appointments.created` | `appointment-service` | `CreateAppointment` | `event_type`, `occurred_at`, `id`, `title`, `doctor_id`, `status` |
+| `appointments.status_updated` | `appointment-service` | `UpdateAppointmentStatus` | `event_type`, `occurred_at`, `id`, `old_status`, `new_status` |
 
-1. Appointment Service attempts gRPC call to Doctor Service
-2. Context timeout triggers after `15 seconds` (configurable)
-3. gRPC returns `Unavailable` status code
-4. Error is returned to client with details
+Example payload:
 
-**gRPC Status Codes:**
-- `Unavailable` (code 14): Doctors service is currently unavailable
-- `NotFound` (code 5): Doctor with id <ID> not found
-
-**Logged Output:**
+```json
+{
+	"event_type": "appointments.created",
+	"occurred_at": "2026-05-01T10:24:01Z",
+	"id": "appt-1",
+	"title": "Initial cardiac consultation",
+	"doctor_id": "doc-1",
+	"status": "new"
+}
 ```
-[ERROR] Doctors service is currently unavailable
-Error: <error_details>
-```
+
+## Consistency Trade-offs
+
+DB write can succeed while publish could fail.
+
+How to improve reliability:
+- Outbox pattern (store event in DB transaction + background publisher)
+- NATS JetStream
+
+## NATS Core vs RabbitMQ
+
+| Broker | NATS Core | RabbitMQ |
+|--------|-----------|----------|
+| Delievery model | fast fire-and-forget pub/sub | exchange/queue |
+| Durability | no persistence by default | durable queues + acknowledgements |
+| When to choose | simple transient notifications | guaranteed delivery matter |
