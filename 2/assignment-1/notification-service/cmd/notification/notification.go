@@ -51,7 +51,7 @@ func connectNATSWithRetry(connectionURL string, maxAttempts int, initialBackoff 
 }
 
 func (lw *logWriter) Write(bs []byte) (int, error) {
-	text := fmt.Sprint(time.Now().UTC().Format(lw.time_format), " | ", string(bs))
+	text := string(bs)
 
 	f, err := os.OpenFile(lw.file_path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 

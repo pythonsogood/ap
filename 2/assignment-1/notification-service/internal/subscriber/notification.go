@@ -2,9 +2,7 @@ package subscriber
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -33,16 +31,20 @@ func (e *natsEventSubscriber) SubscribeNotification(subj string) error {
 			return
 		}
 
-		message := fmt.Sprintf("{\"time\": \"%s\",\"subject\":\"%s\",\"event\":{", time.Now().Format(time.RFC3339), subj)
-
-		for k, v := range data {
-			message += fmt.Sprintf("\"%s\": %v,", k, v)
-			log.Printf("%s: %v\n", k, v)
+		message := map[string]any{
+			"time":    time.Now().UTC().Format(time.RFC3339),
+			"subject": subj,
+			"event":   data,
 		}
 
-		message = strings.TrimSuffix(message, ",") + "}}"
+		messageJSON, err := json.Marshal(message)
 
-		log.Printf("%v\n", message)
+		if err != nil {
+			log.Printf("[SubscribeNotification] json marshal error: %s\n", err.Error())
+			return
+		}
+
+		log.Println(string(messageJSON))
 	})
 
 	if err != nil {
