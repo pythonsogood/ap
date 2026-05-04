@@ -122,6 +122,6 @@ How to improve reliability:
 
 | Broker | NATS Core | RabbitMQ |
 |--------|-----------|----------|
-| Delievery model | fast fire-and-forget pub/sub | exchange/queue |
+| Delivery model | fast fire-and-forget pub/sub | exchange/queue |
 | Durability | no persistence by default | durable queues + acknowledgements |
 | When to choose | simple transient notifications | guaranteed delivery matter |
