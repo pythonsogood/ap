@@ -19,7 +19,7 @@
 - Database: ~~SQLite~~ -> PostgreSQL
 - SQL migrations (`golang-migrate`) for both services
 - Event publishing after successful writes
-- Notification service that subscribes to events and logs structured sJSON
+- Notification service that subscribes to events and logs structured JSON
 
 ### Broker Choice
 
