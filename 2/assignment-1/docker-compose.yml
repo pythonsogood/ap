@@ -58,6 +58,7 @@ services:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
       CACHE_REDIS_URL: "redis://cache-redis:6379"
+      CACHE_TTL: ${CACHE_TTL_SECONDS}
       DB_POSTGRES_HOST: "doctor-service-postgres"
       DB_POSTGRES_PORT: 5432
       DB_POSTGRES_USER: ${DOCTOR_SERVICE_POSTGRES_USER}

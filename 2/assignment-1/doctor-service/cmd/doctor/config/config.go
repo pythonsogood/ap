@@ -7,6 +7,12 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+type CacheType string
+
+const (
+	CacheTypeRedis CacheType = "redis"
+)
+
 type DatabaseType string
 
 const (
@@ -22,6 +28,16 @@ const (
 
 type serverConfig struct {
 	Port uint16 `toml:"port" env:"SERVER_PORT"`
+}
+
+type cacheRedisConfig struct {
+	Url string `toml:"url" env:"CACHE_REDIS_URL"`
+}
+
+type cacheConfig struct {
+	Type  CacheType        `toml:"type" env:"CACHE_TYPE"`
+	Redis cacheRedisConfig `toml:"redis"`
+	Ttl   uint             `toml:"ttl" env:"CACHE_TTL"`
 }
 
 type databaseSQLite3Config struct {
@@ -53,6 +69,7 @@ type messageBrokerConfig struct {
 
 type Config struct {
 	Server        serverConfig        `toml:"server"`
+	Cache         cacheConfig         `toml:"cache"`
 	Database      databaseConfig      `toml:"database"`
 	MessageBroker messageBrokerConfig `toml:"message-broker"`
 }

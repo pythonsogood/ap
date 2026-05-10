@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	"github.com/pythonsogood/ap-assignment1/doctor/cmd/doctor/config"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/cache"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/database"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/event"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
@@ -15,6 +16,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 	grpc_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/grpc"
 	http_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/http"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -67,6 +69,21 @@ func main() {
 
 	if err != nil {
 		panic(err.Error())
+	}
+
+	var doctor_cache_repo cache.DoctorCacheRepository
+
+	switch conf.Cache.Type {
+	case config.CacheTypeRedis:
+		opts, err := redis.ParseURL(conf.Cache.Redis.Url)
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		rdb := redis.NewClient(opts)
+
+		doctor_cache_repo = cache.NewRedisDoctorCacheRepository(rdb)
 	}
 
 	var doctor_db *sql.DB
@@ -122,7 +139,7 @@ func main() {
 
 	server_addr := fmt.Sprintf(":%d", conf.Server.Port)
 
-	doctor_service := service.NewDoctorService(doctor_repo)
+	doctor_service := service.NewDoctorService(doctor_repo, doctor_cache_repo)
 
 	// _, _, err = serve_http(server_addr, doctor_service, event_publisher)
 

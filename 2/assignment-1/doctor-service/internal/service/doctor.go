@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/google/uuid"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/cache"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
 )
@@ -13,10 +14,24 @@ type DoctorService interface {
 }
 
 type doctorServiceImpl struct {
-	repo repository.DoctorRepository
+	repo  repository.DoctorRepository
+	cache cache.DoctorCacheRepository
+}
+
+func NewDoctorService(repo repository.DoctorRepository, cache cache.DoctorCacheRepository) DoctorService {
+	return &doctorServiceImpl{
+		repo:  repo,
+		cache: cache,
+	}
 }
 
 func (s doctorServiceImpl) GetDoctor(id string) (*model.Doctor, error) {
+	cached, err := s.cache.GetDoctor(id)
+
+	if err == nil && cached != nil {
+		return cached, nil
+	}
+
 	return s.repo.FindByID(id)
 }
 
@@ -40,10 +55,4 @@ func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string,
 	}
 
 	return doctor, nil
-}
-
-func NewDoctorService(repo repository.DoctorRepository) DoctorService {
-	return &doctorServiceImpl{
-		repo: repo,
-	}
 }

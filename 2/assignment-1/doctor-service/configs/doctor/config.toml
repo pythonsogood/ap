@@ -1,6 +1,13 @@
 [server]
 port = 8081
 
+[cache]
+type = "redis" # supported: redis
+ttl = 60
+
+[cache.redis]
+url = "redis://localhost:6379"
+
 [database]
 type = "postgres" # supported: sqlite3, postgres
 
