@@ -13,23 +13,19 @@ services:
     restart: unless-stopped
   cache-redis:
     image: redis:8-alpine
-    environment:
-      - REDIS_PASSWORD=${CACHE_REDIS_PASSWORD}
-      - REDIS_USER=${CACHE_REDIS_USER}
-      - REDIS_USER_PASSWORD=${CACHE_REDIS_USER_PASSWORD}
     command: >
       sh -c '
         mkdir -p /usr/local/etc/redis &&
         echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $CACHE_REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
         echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
-        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        echo "user $CACHE_REDIS_USER on >$CACHE_REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
         redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
       '
     volumes:
       - redis-data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "$CACHE_REDIS_PASSWORD", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
