@@ -3,7 +3,9 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
 	"github.com/redis/go-redis/v9"
@@ -15,48 +17,76 @@ const (
 )
 
 type DoctorCacheRepository interface {
-	GetDoctor(id string) (*model.Doctor, error)
-	GetDoctors() ([]*model.Doctor, error)
+	GetDoctor(id string) (*model.Doctor, bool, error)
+	GetDoctors() ([]*model.Doctor, bool, error)
+
+	CreateDoctor(doctor *model.Doctor) error
 }
 
 type redisDoctorCacheRepository struct {
 	client *redis.Client
+	ttl    time.Duration
 }
 
-func NewRedisDoctorCacheRepository(client *redis.Client) DoctorCacheRepository {
+func NewRedisDoctorCacheRepository(client *redis.Client, ttl time.Duration) DoctorCacheRepository {
 	return &redisDoctorCacheRepository{
 		client: client,
+		ttl:    ttl,
 	}
 }
 
-func (r *redisDoctorCacheRepository) GetDoctor(id string) (*model.Doctor, error) {
+func (r *redisDoctorCacheRepository) GetDoctor(id string) (*model.Doctor, bool, error) {
 	raw, err := r.client.Get(context.Background(), fmt.Sprintf(doctorKeyFormat, id)).Bytes()
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, redis.Nil) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
 	var doctor model.Doctor
 
 	if err := json.Unmarshal(raw, &doctor); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &doctor, nil
+	return &doctor, true, nil
 }
 
-func (r *redisDoctorCacheRepository) GetDoctors() ([]*model.Doctor, error) {
+func (r *redisDoctorCacheRepository) GetDoctors() ([]*model.Doctor, bool, error) {
 	raw, err := r.client.Get(context.Background(), doctorsListKey).Bytes()
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, redis.Nil) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
 	var doctors []*model.Doctor
 
 	if err := json.Unmarshal(raw, &doctors); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return doctors, nil
+	return doctors, true, nil
+}
+
+func (r *redisDoctorCacheRepository) CreateDoctor(doctor *model.Doctor) error {
+	raw, err := json.Marshal(doctor)
+
+	if err != nil {
+		return err
+	}
+
+	cmd := r.client.Set(context.Background(), fmt.Sprintf(doctorKeyFormat, doctor.ID), raw, r.ttl)
+
+	if err := cmd.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }

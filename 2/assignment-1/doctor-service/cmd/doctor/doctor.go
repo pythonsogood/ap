@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
@@ -78,12 +80,15 @@ func main() {
 		opts, err := redis.ParseURL(conf.Cache.Redis.Url)
 
 		if err != nil {
-			panic(err.Error())
+			log.Println(err.Error())
+			break
 		}
 
 		rdb := redis.NewClient(opts)
 
-		doctor_cache_repo = cache.NewRedisDoctorCacheRepository(rdb)
+		doctor_cache_repo = cache.NewRedisDoctorCacheRepository(rdb, time.Duration(conf.Cache.Ttl))
+	default:
+		log.Println("Unsupported cache type!")
 	}
 
 	var doctor_db *sql.DB

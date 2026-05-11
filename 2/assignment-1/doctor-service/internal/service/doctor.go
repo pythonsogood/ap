@@ -1,6 +1,8 @@
 package service
 
 import (
+	"log"
+
 	"github.com/google/uuid"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/cache"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/model"
@@ -26,13 +28,31 @@ func NewDoctorService(repo repository.DoctorRepository, cache cache.DoctorCacheR
 }
 
 func (s doctorServiceImpl) GetDoctor(id string) (*model.Doctor, error) {
-	cached, err := s.cache.GetDoctor(id)
+	if s.cache != nil {
+		cached, found, err := s.cache.GetDoctor(id)
 
-	if err == nil && cached != nil {
-		return cached, nil
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			if found && cached != nil {
+				return cached, nil
+			}
+		}
 	}
 
-	return s.repo.FindByID(id)
+	doctor, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		if err := s.cache.CreateDoctor(doctor); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	return doctor, nil
 }
 
 func (s doctorServiceImpl) GetAllDoctors() ([]*model.Doctor, error) {
