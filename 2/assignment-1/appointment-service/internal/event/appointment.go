@@ -41,11 +41,12 @@ type AppointmentStatusUpdatedEvent struct {
 	EventType  string       `json:"event_type"`
 	OccurredAt string       `json:"occurred_at"`
 	Id         string       `json:"id"`
+	DoctorId   string       `json:"doctor_id"`
 	OldStatus  model.Status `json:"old_status"`
 	NewStatus  model.Status `json:"new_status"`
 }
 
-func NewAppointmentStatusUpdatedEvent(id string, old_status model.Status, new_status model.Status, occurred_at time.Time) *AppointmentStatusUpdatedEvent {
+func NewAppointmentStatusUpdatedEvent(id string, doctor_id string, old_status model.Status, new_status model.Status, occurred_at time.Time) *AppointmentStatusUpdatedEvent {
 	if occurred_at.IsZero() {
 		occurred_at = time.Now()
 	}
@@ -54,6 +55,7 @@ func NewAppointmentStatusUpdatedEvent(id string, old_status model.Status, new_st
 		EventType:  "appointments.status_updated",
 		OccurredAt: occurred_at.Format(time.RFC3339),
 		Id:         id,
+		DoctorId:   doctor_id,
 		OldStatus:  old_status,
 		NewStatus:  new_status,
 	}

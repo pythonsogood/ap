@@ -1,4 +1,4 @@
-# Assignment 3 - Message Queue & Database Migrations
+# Assignment 4 - Caching Strategies & Background Jobs
 
 > small 3-service platform composed of a **Doctor Service**, an **Appointment Service**, and a **Notification Service**
 
@@ -14,52 +14,86 @@
 - Database: PostgreSQL
 - Configuration: TOML / Environment Variables
 
-### What Changed from Assignment 2
+### What Changed from Assignment 3
 
-- Database: ~~SQLite~~ -> PostgreSQL
-- SQL migrations (`golang-migrate`) for both services
-- Event publishing after successful writes
-- Notification service that subscribes to events and logs structured JSON
+- Added Redis cache layer for read endpoints.
+- Added cache invalidation on write endpoints.
+- Added Redis-backed per-client rate limiting via gRPC unary interceptors.
+- Extended Notification Service with a worker-pool background queue.
+- Added retry with exponential backoff for gateway failures.
+- Added idempotency key storage in Redis to prevent duplicate external calls.
+- Added new `mock-gateway` binary to simulate third-party notification API behavior.
 
-### Broker Choice
+## Caching Strategy
+Redis cache is implemented behind cache repository interfaces and injected into services.
+No Redis calls are made in domain models or gRPC handlers.
 
-Chosen broker: **NATS Core**.
+### Doctor Service Cache
 
-Why: simple local setup and low overhead.
+| Operation | Strategy | Key | TTL |
+|---|---|---|---|
+| `GetDoctor(id)` | Cache-Aside | `doctor:<id>` | `CACHE_TTL_SECONDS` |
+| `ListDoctors` | Cache-Aside | `doctors:list` | `CACHE_TTL_SECONDS` |
+| `CreateDoctor` | Write-Through | `doctors:list` | immediate eviction |
 
-## Service Responsibilities
+### Appointment Service Cache
 
-### Doctor Service
-- Create new doctor profiles
-- Retrieve doctor by ID
-- List all doctors
-- Enforce unique email constraint
+| Operation | Strategy | Key | TTL |
+|---|---|---|---|
+| `GetAppointment(id)` | Cache-Aside | `appointment:<id>` | `CACHE_TTL_SECONDS` |
+| `ListAppointments` | Cache-Aside | `appointments:list` | `CACHE_TTL_SECONDS` |
+| `CreateAppointment` | Write-Around | `appointments:list` | immediate eviction |
+| `UpdateAppointmentStatus` | Write-Through | `appointment:<id>`, `appointments:list` | immediate eviction |
 
-### Appointment Service
-- Create new appointments
-- Retrieve appointment by ID
-- List all appointments
-- Update appointment status
-- Validate doctor existence via Doctor Service gRPC
+### Cache Invalidation Rules
 
-### Notification Service
+- Invalidation occurs **after successful DB write** and **before gRPC response returns**.
+- Cache miss never fails the request; DB is fallback source of truth.
+- Cache write/delete failures are logged but do not block responses.
+- Redis unavailability should degrade behavior to DB-only reads (best effort).
 
-- Connect to broker on startup.
-- Retry broker connection with exponential backoff if unavailable.
-- Subscribe to:
-  - `doctors.created`
-  - `appointments.created`
-  - `appointments.status_updated`
-- On each message, deserialize JSON and log one structured JSON message
+## Rate Limiting Algorithm
 
-## Environment Variables
+Rate limiter is implemented as `UnaryServerInterceptor` in Doctor and Appointment services.
 
-| Service | Environment variables |
-|---------|-----------------------|
-| Shared | `NATS_CONNECTION_URL` -> `MESSAGE_BROKER_NATS_CONNECTION_URL` |
-| Doctor | `DOCTOR_SERVICE_POSTGRES_USER` -> `DB_POSTGRES_USER`, `DOCTOR_SERVICE_POSTGRES_PASSWORD` -> `DB_POSTGRES_PASSWORD`, `DOCTOR_SERVICE_POSTGRES_DB` -> `DB_POSTGRES_DB`, `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT` |
-| Appointment | `APPOINTMENT_SERVICE_POSTGRES_USER` -> `DB_POSTGRES_USER`, `APPOINTMENT_SERVICE_POSTGRES_PASSWORD` -> `DB_POSTGRES_PASSWORD`, `APPOINTMENT_SERVICE_POSTGRES_DB` -> `DB_POSTGRES_DB`, `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT`, `DOCTOR_SERVICE_ADDRESS` -> `SERVICES_DOCTOR_ADDRESS`, `DOCTOR_SERVICE_TIMEOUT` -> `SERVICES_DOCTOR_TIMEOUT` |
-| Notification | `NOTIFICATION_SERVICE_LOG_DIRECTORY` `NOTIFICATION_SERVICE_LOG_FILE` -> `LOG_FILE` |
+Sliding window per minute counter using Redis:
+- Key format: `<service>:ratelimit:<client_ip>:<minute_window>`
+- For each request:
+	1. `INCR` key
+	2. set `EXPIRE 60s` when counter is first created
+- If counter > configured RPM -> return `codes.ResourceExhausted`
+
+Why this algorithm:
+- Simple and deterministic for defense/demo.
+- Centralized Redis counters keep limits consistent across multiple service instances.
+
+## Background Job Queue
+
+Notification service has 2 separated concerns:
+- `internal/subscriber` - broker subscription
+- `internal/jobqueue` - worker pool, idempotency, retry, dead-letter behavior
+
+### Worker Pool
+- Queue: buffered Go channel
+- Configurable worker count (`WORKER_POOL_SIZE`, default 3)
+- Hardcoded queue buffer
+- Backpressure handling: enqueue blocks when channel is full (no silent drop)
+
+### Idempotency
+- Redis key: `notification:idempotency:<idempotency_key>`
+- Value `done` means already processed
+- TTL: 24h
+- If already done -> job dropped (duplicate protection)
+
+### Retry & Dead Letter
+- Retries: up to 3 attempts
+- Backoff: 1s, 2s, 4s
+- Retry on:
+  - HTTP 503 from gateway
+  - network/unreachable gateway errors
+- After 3 failures:
+  - Write dead-letter JSON entry to `stderr`
+  - Worker continues running
 
 ## How to Run the Project
 
@@ -67,61 +101,19 @@ Why: simple local setup and low overhead.
 docker compose up --build
 ```
 
-## Migrations
-
-Migrations run automatically on service startup before gRPC server starts.
-
-Migration files:
-- `doctor-service/migrations/`
-  - `000001_create_doctors.up.sql`
-  - `000001_create_doctors.down.sql`
-- `appointment-service/migrations/`
-  - `000001_create_appointments.up.sql`
-  - `000001_create_appointments.down.sql`
-
 ## Startup Order
 
 Using Docker Compose, dependencies and healthchecks are configured.
 
-NATS broker and PostgreSQL instances launch first
-Notification service depends on NATS broker, starts after the broker
-Doctor and Appointment services depends on both NATS broker and their PostgreSQL databases, starts after the broker and a own db
+## Cache Consistency Trade-offs
 
-## Event Contract
+- When Redis is unavailable, services should continue running and serve reads directly from PostgreSQL; caching is best-effort optimization, not a dependency for correctness.
+- Redis is treated as performance optimization, not source of truth.
+- If Redis fails, system still serves from PostgreSQL (higher latency).
+- In distributed Redis/cluster mode, consistency and failover behavior depend on replication topology.
 
-Published events are JSON with at least `event_type`, `occurred_at`, and payload fields.
+## Rate-Limiting Trade-offs
 
-| Subject | Publisher | Trigger | Fields |
-|---------|-----------|---------|--------|
-| `doctors.created` | `doctor-service` | `CreateDoctor` | `event_type`, `occurred_at`, `id`, `full_name`, `specialization`, `email` |
-| `appointments.created` | `appointment-service` | `CreateAppointment` | `event_type`, `occurred_at`, `id`, `title`, `doctor_id`, `status` |
-| `appointments.status_updated` | `appointment-service` | `UpdateAppointmentStatus` | `event_type`, `occurred_at`, `id`, `old_status`, `new_status` |
+Limitation of local in-memory limiting in scaled deployments is per-instance counters are inconsistent across replicas -> clients can bypass limits by hitting different instances.
 
-Example payload:
-
-```json
-{
-	"event_type": "appointments.created",
-	"occurred_at": "2026-05-01T10:24:01Z",
-	"id": "appt-1",
-	"title": "Initial cardiac consultation",
-	"doctor_id": "doc-1",
-	"status": "new"
-}
-```
-
-## Consistency Trade-offs
-
-DB write can succeed while publish could fail.
-
-How to improve reliability:
-- Outbox pattern (store event in DB transaction + background publisher)
-- NATS JetStream
-
-## NATS Core vs RabbitMQ
-
-| Broker | NATS Core | RabbitMQ |
-|--------|-----------|----------|
-| Delivery model | fast fire-and-forget pub/sub | exchange/queue |
-| Durability | no persistence by default | durable queues + acknowledgements |
-| When to choose | simple transient notifications | guaranteed delivery matter |
+Redis-backed centralized counters solve both by sharing one global counter state.

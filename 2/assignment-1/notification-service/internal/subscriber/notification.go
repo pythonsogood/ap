@@ -1,11 +1,13 @@
 package subscriber
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/pythonsogood/ap-assignment1/notification/internal/jobqueue"
 )
 
 type EventSubscriber interface {
@@ -13,12 +15,14 @@ type EventSubscriber interface {
 }
 
 type natsEventSubscriber struct {
-	nc *nats.Conn
+	nc    *nats.Conn
+	queue *jobqueue.Queue
 }
 
-func NewNATSEventSubscriber(nc *nats.Conn) EventSubscriber {
+func NewNATSEventSubscriber(nc *nats.Conn, queue *jobqueue.Queue) EventSubscriber {
 	return &natsEventSubscriber{
-		nc: nc,
+		nc:    nc,
+		queue: queue,
 	}
 }
 
@@ -45,6 +49,22 @@ func (e *natsEventSubscriber) SubscribeNotification(subj string) error {
 		}
 
 		log.Println(string(messageJSON))
+
+		if subj == "appointments.status_updated" {
+			newStatus, _ := data["new_status"].(string)
+
+			if newStatus == "DONE" {
+				eventType, _ := data["event_type"].(string)
+				appointmentID, _ := data["id"].(string)
+				occurredAt, _ := data["occurred_at"].(string)
+				doctorID, _ := data["doctor_id"].(string)
+
+				idempotencyKey := jobqueue.BuildIdempotencyKey(eventType, appointmentID, occurredAt)
+				job := jobqueue.BuildJob(appointmentID, doctorID, occurredAt, idempotencyKey)
+
+				e.queue.Enqueue(context.Background(), job)
+			}
+		}
 	})
 
 	if err != nil {

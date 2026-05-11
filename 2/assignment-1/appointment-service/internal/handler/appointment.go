@@ -146,6 +146,7 @@ func (h *appointmentHTTPHandlerImpl) PATCHStatusByID(c *gin.Context) {
 	err = h.event_publisher.AppointmentStatusUpdated(
 		event.NewAppointmentStatusUpdatedEvent(
 			id,
+			old_appointment.DoctorID,
 			old_appointment_status,
 			new_appointment_status,
 			time.Now(),
@@ -333,6 +334,7 @@ func (h *AppointmentGRPCHandler) UpdateAppointmentStatus(_ context.Context, in *
 	err = h.event_publisher.AppointmentStatusUpdated(
 		event.NewAppointmentStatusUpdatedEvent(
 			id,
+			old_appointment.DoctorID,
 			old_appointment_status,
 			new_appointment_status,
 			time.Now(),

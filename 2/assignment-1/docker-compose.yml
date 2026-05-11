@@ -126,13 +126,24 @@ services:
     environment:
       CONFIG_FILE: config.toml
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      REDIS_URL: "redis://cache-redis:6379"
       LOG_FILE: ${NOTIFICATION_SERVICE_LOG_DIRECTORY}/${NOTIFICATION_SERVICE_LOG_FILE}
+      GATEWAY_URL: "http://gateway-service:8080"
+      WORKER_POOL_SIZE: ${NOTIFICATION_SERVICE_WORKER_POOL_SIZE}
     volumes:
       - notification-logs:/app/${NOTIFICATION_SERVICE_LOG_DIRECTORY}
     restart: unless-stopped
     depends_on:
+      cache-redis:
+        condition: service_healthy
       message-broker-nats:
         condition: service_healthy
+  gateway-service:
+    image: gateway-service
+    build:
+      context: .
+      dockerfile: ./mock-gateway/Dockerfile
+    restart: unless-stopped
 
 volumes:
   redis-data:

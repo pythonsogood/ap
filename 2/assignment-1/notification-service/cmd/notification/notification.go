@@ -12,7 +12,9 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/pythonsogood/ap-assignment1/notification/cmd/notification/config"
+	"github.com/pythonsogood/ap-assignment1/notification/internal/jobqueue"
 	"github.com/pythonsogood/ap-assignment1/notification/internal/subscriber"
+	"github.com/redis/go-redis/v9"
 )
 
 type logWriter struct {
@@ -77,6 +79,21 @@ func main() {
 		file_path:   conf.Log.File,
 	})
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	opts, err := redis.ParseURL(conf.RedisUrl)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	rdb := redis.NewClient(opts)
+
+	queue := jobqueue.NewQueue(rdb, conf.JobQueue.GatewayUrl, int(conf.JobQueue.WorkerPoolSize), 0)
+	queue.Start(ctx)
+	defer queue.Stop()
+
 	var event_subscriber subscriber.EventSubscriber
 	var nc *nats.Conn
 
@@ -88,7 +105,7 @@ func main() {
 			log.Fatalf("broker unavailable at startup: %s", err.Error())
 		}
 
-		event_subscriber = subscriber.NewNATSEventSubscriber(nc)
+		event_subscriber = subscriber.NewNATSEventSubscriber(nc, queue)
 	default:
 		panic("Unsupported message broker type!")
 	}
@@ -98,9 +115,6 @@ func main() {
 			panic(err.Error())
 		}
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	<-ctx.Done()
 	log.Println("received shutdown signal")

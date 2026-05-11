@@ -1,3 +1,9 @@
+[cache]
+type = "redis" # supported: none, redis
+
+[cache.redis]
+url = "redis://localhost:6379"
+
 [message-broker]
 type = "nats" # supported: nats
 logged_subjects = [
@@ -11,3 +17,7 @@ connection_url = "localhost:4222"
 
 [log]
 file = "./logs/log.log"
+
+[job_queue]
+gateway_url = "http://localhost:8080"
+worker_pool_size = 3

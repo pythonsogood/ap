@@ -27,9 +27,16 @@ type logConfig struct {
 	File string `toml:"file" env:"LOG_FILE"`
 }
 
+type jobQueueConfig struct {
+	GatewayUrl     string `toml:"gateway_url" env:"GATEWAY_URL"`
+	WorkerPoolSize uint   `toml:"worker_pool_size" env:"WORKER_POOL_SIZE"`
+}
+
 type Config struct {
+	RedisUrl      string              `toml:"url" env:"REDIS_URL"`
 	MessageBroker messageBrokerConfig `toml:"message-broker"`
 	Log           logConfig           `toml:"log"`
+	JobQueue      jobQueueConfig      `toml:"job_queue"`
 }
 
 func ParseConfig(config_path string) (*Config, error) {
