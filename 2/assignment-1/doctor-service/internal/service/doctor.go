@@ -46,12 +46,6 @@ func (s doctorServiceImpl) GetDoctor(id string) (*model.Doctor, error) {
 		return nil, err
 	}
 
-	if s.cache != nil {
-		if err := s.cache.CreateDoctor(doctor); err != nil {
-			log.Println(err.Error())
-		}
-	}
-
 	return doctor, nil
 }
 
@@ -72,6 +66,12 @@ func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string,
 
 	if err := s.repo.Insert(doctor); err != nil {
 		return nil, err
+	}
+
+	if s.cache != nil {
+		if err := s.cache.CreateDoctor(); err != nil {
+			log.Println(err.Error())
+		}
 	}
 
 	return doctor, nil

@@ -20,7 +20,7 @@ type DoctorCacheRepository interface {
 	GetDoctor(id string) (*model.Doctor, bool, error)
 	GetDoctors() ([]*model.Doctor, bool, error)
 
-	CreateDoctor(doctor *model.Doctor) error
+	CreateDoctor() error
 }
 
 type redisDoctorCacheRepository struct {
@@ -75,14 +75,8 @@ func (r *redisDoctorCacheRepository) GetDoctors() ([]*model.Doctor, bool, error)
 	return doctors, true, nil
 }
 
-func (r *redisDoctorCacheRepository) CreateDoctor(doctor *model.Doctor) error {
-	raw, err := json.Marshal(doctor)
-
-	if err != nil {
-		return err
-	}
-
-	cmd := r.client.Set(context.Background(), fmt.Sprintf(doctorKeyFormat, doctor.ID), raw, r.ttl)
+func (r *redisDoctorCacheRepository) CreateDoctor() error {
+	cmd := r.client.Del(context.Background(), doctorsListKey)
 
 	if err := cmd.Err(); err != nil {
 		return err
