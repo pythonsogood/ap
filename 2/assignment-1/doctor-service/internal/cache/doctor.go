@@ -18,9 +18,12 @@ const (
 
 type DoctorCacheRepository interface {
 	GetDoctor(id string) (*model.Doctor, bool, error)
-	GetDoctors() ([]*model.Doctor, bool, error)
+	SaveDoctor(doctor *model.Doctor) error
 
-	CreateDoctor() error
+	GetDoctors() ([]*model.Doctor, bool, error)
+	SaveDoctors(doctors []*model.Doctor) error
+
+	CreateDoctor(doctor *model.Doctor) error
 }
 
 type redisDoctorCacheRepository struct {
@@ -55,6 +58,22 @@ func (r *redisDoctorCacheRepository) GetDoctor(id string) (*model.Doctor, bool, 
 	return &doctor, true, nil
 }
 
+func (r *redisDoctorCacheRepository) SaveDoctor(doctor *model.Doctor) error {
+	raw, err := json.Marshal(doctor)
+
+	if err != nil {
+		return err
+	}
+
+	cmd := r.client.Set(context.Background(), fmt.Sprintf(doctorKeyFormat, doctor.ID), raw, r.ttl)
+
+	if err := cmd.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *redisDoctorCacheRepository) GetDoctors() ([]*model.Doctor, bool, error) {
 	raw, err := r.client.Get(context.Background(), doctorsListKey).Bytes()
 
@@ -75,7 +94,27 @@ func (r *redisDoctorCacheRepository) GetDoctors() ([]*model.Doctor, bool, error)
 	return doctors, true, nil
 }
 
-func (r *redisDoctorCacheRepository) CreateDoctor() error {
+func (r *redisDoctorCacheRepository) SaveDoctors(doctors []*model.Doctor) error {
+	raw, err := json.Marshal(doctors)
+
+	if err != nil {
+		return err
+	}
+
+	cmd := r.client.Set(context.Background(), doctorsListKey, raw, r.ttl)
+
+	if err := cmd.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *redisDoctorCacheRepository) CreateDoctor(doctor *model.Doctor) error {
+	if err := r.SaveDoctor(doctor); err != nil {
+		return err
+	}
+
 	cmd := r.client.Del(context.Background(), doctorsListKey)
 
 	if err := cmd.Err(); err != nil {

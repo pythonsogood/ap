@@ -46,11 +46,41 @@ func (s doctorServiceImpl) GetDoctor(id string) (*model.Doctor, error) {
 		return nil, err
 	}
 
+	if s.cache != nil {
+		if err := s.cache.SaveDoctor(doctor); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
 	return doctor, nil
 }
 
 func (s doctorServiceImpl) GetAllDoctors() ([]*model.Doctor, error) {
-	return s.repo.All()
+	if s.cache != nil {
+		cached, found, err := s.cache.GetDoctors()
+
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			if found && cached != nil {
+				return cached, nil
+			}
+		}
+	}
+
+	doctors, err := s.repo.All()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		if err := s.cache.SaveDoctors(doctors); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	return doctors, nil
 }
 
 func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string, email string) (*model.Doctor, error) {
@@ -69,7 +99,7 @@ func (s doctorServiceImpl) CreateDoctor(full_name string, specialization string,
 	}
 
 	if s.cache != nil {
-		if err := s.cache.CreateDoctor(); err != nil {
+		if err := s.cache.CreateDoctor(doctor); err != nil {
 			log.Println(err.Error())
 		}
 	}

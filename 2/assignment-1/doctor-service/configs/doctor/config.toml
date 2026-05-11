@@ -1,8 +1,9 @@
 [server]
 port = 8081
+rate_limit_rpm = 100
 
 [cache]
-type = "redis" # supported: redis
+type = "redis" # supported: none, redis
 ttl = 60
 
 [cache.redis]

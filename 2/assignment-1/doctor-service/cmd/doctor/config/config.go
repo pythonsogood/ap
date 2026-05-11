@@ -10,6 +10,7 @@ import (
 type CacheType string
 
 const (
+	CacheTypeNone  CacheType = "none"
 	CacheTypeRedis CacheType = "redis"
 )
 
@@ -27,7 +28,8 @@ const (
 )
 
 type serverConfig struct {
-	Port uint16 `toml:"port" env:"SERVER_PORT"`
+	Port         uint16 `toml:"port" env:"SERVER_PORT"`
+	RateLimitRpm uint   `toml:"rate_limit_rpm" env:"SERVER_RATE_LIMIT_RPM"`
 }
 
 type cacheRedisConfig struct {

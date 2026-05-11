@@ -14,6 +14,7 @@ import (
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/database"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/event"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/handler"
+	"github.com/pythonsogood/ap-assignment1/doctor/internal/middleware"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/doctor/internal/service"
 	grpc_transport "github.com/pythonsogood/ap-assignment1/doctor/internal/transport/grpc"
@@ -42,7 +43,7 @@ func serve_http(server_addr string, doctor_service service.DoctorService, event_
 	return router, doctor_handler, nil
 }
 
-func serve_grpc(server_addr string, doctor_service service.DoctorService, event_publisher event.EventPublisher) (*net.Listener, *handler.DoctorGRPCHandler, error) {
+func serve_grpc(server_addr string, doctor_service service.DoctorService, event_publisher event.EventPublisher, rate_limiter *middleware.RateLimiter) (*net.Listener, *handler.DoctorGRPCHandler, error) {
 	lis, err := net.Listen("tcp", server_addr)
 
 	if err != nil {
@@ -51,7 +52,13 @@ func serve_grpc(server_addr string, doctor_service service.DoctorService, event_
 
 	doctor_handler := handler.NewDoctorGRPCHandler(doctor_service, event_publisher)
 
-	s := grpc.NewServer()
+	var s *grpc.Server
+
+	if rate_limiter != nil {
+		s = grpc.NewServer(grpc.UnaryInterceptor(rate_limiter.GRPCUnaryServerInterceptor()))
+	} else {
+		s = grpc.NewServer()
+	}
 
 	err = grpc_transport.SetupDoctorTransport(s, doctor_handler)
 
@@ -74,8 +81,11 @@ func main() {
 	}
 
 	var doctor_cache_repo cache.DoctorCacheRepository
+	var rate_limiter *middleware.RateLimiter
 
 	switch conf.Cache.Type {
+	case config.CacheTypeNone:
+		log.Println("Caching disabled")
 	case config.CacheTypeRedis:
 		opts, err := redis.ParseURL(conf.Cache.Redis.Url)
 
@@ -86,7 +96,9 @@ func main() {
 
 		rdb := redis.NewClient(opts)
 
-		doctor_cache_repo = cache.NewRedisDoctorCacheRepository(rdb, time.Duration(conf.Cache.Ttl))
+		doctor_cache_repo = cache.NewRedisDoctorCacheRepository(rdb, time.Duration(conf.Cache.Ttl)*time.Second)
+
+		rate_limiter = middleware.NewRateLimiter(rdb, conf.Server.RateLimitRpm)
 	default:
 		log.Println("Unsupported cache type!")
 	}
@@ -152,7 +164,7 @@ func main() {
 	// 	panic(err.Error())
 	// }
 
-	_, _, err = serve_grpc(server_addr, doctor_service, event_publisher)
+	_, _, err = serve_grpc(server_addr, doctor_service, event_publisher, rate_limiter)
 
 	if err != nil {
 		panic(err.Error())
