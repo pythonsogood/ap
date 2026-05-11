@@ -3,19 +3,23 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	"github.com/pythonsogood/ap-assignment1/appointment/cmd/appointment/config"
+	"github.com/pythonsogood/ap-assignment1/appointment/internal/cache"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/database"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/event"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/handler"
+	"github.com/pythonsogood/ap-assignment1/appointment/internal/middleware"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/service"
 	grpc_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/grpc"
 	http_transport "github.com/pythonsogood/ap-assignment1/appointment/internal/transport/http"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -39,7 +43,7 @@ func serve_http(server_addr string, appointment_service service.AppointmentServi
 	return router, appointment_handler, nil
 }
 
-func serve_grpc(server_addr string, appointment_service service.AppointmentService, event_publisher event.EventPublisher) (*net.Listener, *handler.AppointmentGRPCHandler, error) {
+func serve_grpc(server_addr string, appointment_service service.AppointmentService, event_publisher event.EventPublisher, rate_limiter *middleware.RateLimiter) (*net.Listener, *handler.AppointmentGRPCHandler, error) {
 	lis, err := net.Listen("tcp", server_addr)
 
 	if err != nil {
@@ -48,7 +52,13 @@ func serve_grpc(server_addr string, appointment_service service.AppointmentServi
 
 	appointment_handler := handler.NewAppointmentGRPCHandler(appointment_service, event_publisher)
 
-	s := grpc.NewServer()
+	var s *grpc.Server
+
+	if rate_limiter != nil {
+		s = grpc.NewServer(grpc.UnaryInterceptor(rate_limiter.GRPCUnaryServerInterceptor()))
+	} else {
+		s = grpc.NewServer()
+	}
 
 	err = grpc_transport.SetupAppointmentdTransport(s, appointment_handler)
 
@@ -68,6 +78,29 @@ func main() {
 
 	if err != nil {
 		panic(err.Error())
+	}
+
+	var appointment_cache_repo cache.AppointmentCacheRepository
+	var rate_limiter *middleware.RateLimiter
+
+	switch conf.Cache.Type {
+	case config.CacheTypeNone:
+		log.Println("Caching disabled")
+	case config.CacheTypeRedis:
+		opts, err := redis.ParseURL(conf.Cache.Redis.Url)
+
+		if err != nil {
+			log.Println(err.Error())
+			break
+		}
+
+		rdb := redis.NewClient(opts)
+
+		appointment_cache_repo = cache.NewRedisAppointmentCacheRepository(rdb, time.Duration(conf.Cache.Ttl)*time.Second)
+
+		rate_limiter = middleware.NewRateLimiter(rdb, conf.Server.RateLimitRpm)
+	default:
+		log.Println("Unsupported cache type!")
 	}
 
 	var appointment_db *sql.DB
@@ -130,7 +163,7 @@ func main() {
 	// doctor_service := service.NewHTTPDoctorService(conf.Services.Doctor.Address, &http_client)
 	doctor_service := service.NewGRPCDoctorService(conf.Services.Doctor.Address, time.Duration(conf.Services.Doctor.Timeout)*time.Second)
 
-	appointment_service := service.NewAppointmentService(appointment_repo, doctor_service)
+	appointment_service := service.NewAppointmentService(appointment_repo, appointment_cache_repo, doctor_service)
 
 	// _, _, err = serve_http(server_addr, appointment_service, event_publisher)
 
@@ -138,7 +171,7 @@ func main() {
 	// 	panic(err.Error())
 	// }
 
-	_, _, err = serve_grpc(server_addr, appointment_service, event_publisher)
+	_, _, err = serve_grpc(server_addr, appointment_service, event_publisher, rate_limiter)
 
 	if err != nil {
 		panic(err.Error())

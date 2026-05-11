@@ -4,6 +4,14 @@ timeout = 15
 
 [server]
 port = 8082
+rate_limit_rpm = 100
+
+[cache]
+type = "redis" # supported: none, redis
+ttl = 60
+
+[cache.redis]
+url = "redis://localhost:6379"
 
 [database]
 type = "postgres" # supported: sqlite3, postgres
@@ -22,4 +30,4 @@ db = "appointment"
 type = "nats" # supported: nats
 
 [message-broker.nats]
-connection_url = "message-broker-nats"
+connection_url = "localhost:4222"

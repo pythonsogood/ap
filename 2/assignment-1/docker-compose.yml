@@ -95,7 +95,10 @@ services:
       dockerfile: ./appointment-service/Dockerfile
     environment:
       CONFIG_FILE: config.toml
+      SERVER_RATE_LIMIT_RPM: ${APPOINTMENT_SERVICE_SERVER_RATE_LIMIT_RPM}
       MESSAGE_BROKER_NATS_CONNECTION_URL: ${NATS_CONNECTION_URL}
+      CACHE_REDIS_URL: "redis://cache-redis:6379"
+      CACHE_TTL: ${CACHE_TTL_SECONDS}
       DB_POSTGRES_HOST: "appointment-service-postgres"
       DB_POSTGRES_PORT: 5432
       DB_POSTGRES_USER: ${APPOINTMENT_SERVICE_POSTGRES_USER}
@@ -109,6 +112,8 @@ services:
       - "8082:8082"
     restart: unless-stopped
     depends_on:
+      cache-redis:
+        condition: service_healthy
       appointment-service-postgres:
         condition: service_healthy
       message-broker-nats:

@@ -2,8 +2,10 @@ package service
 
 import (
 	"errors"
+	"log"
 
 	"github.com/google/uuid"
+	"github.com/pythonsogood/ap-assignment1/appointment/internal/cache"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/model"
 	"github.com/pythonsogood/ap-assignment1/appointment/internal/repository"
 )
@@ -17,15 +19,72 @@ type AppointmentService interface {
 
 type appointmentServiceImpl struct {
 	repo           repository.AppointmentRepository
+	cache          cache.AppointmentCacheRepository
 	doctor_service DoctorService
 }
 
+func NewAppointmentService(repo repository.AppointmentRepository, cache cache.AppointmentCacheRepository, doctor_service DoctorService) AppointmentService {
+	return &appointmentServiceImpl{
+		repo:           repo,
+		cache:          cache,
+		doctor_service: doctor_service,
+	}
+}
+
 func (s appointmentServiceImpl) GetAppointment(id string) (*model.Appointment, error) {
-	return s.repo.FindByID(id)
+	if s.cache != nil {
+		cached, found, err := s.cache.GetAppointment(id)
+
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			if found && cached != nil {
+				return cached, nil
+			}
+		}
+	}
+
+	appointment, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		if err := s.cache.SaveAppointment(appointment); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	return appointment, nil
 }
 
 func (s appointmentServiceImpl) GetAllAppointments() ([]*model.Appointment, error) {
-	return s.repo.All()
+	if s.cache != nil {
+		cached, found, err := s.cache.GetAppointments()
+
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			if found && cached != nil {
+				return cached, nil
+			}
+		}
+	}
+
+	appointments, err := s.repo.All()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		if err := s.cache.SaveAppointments(appointments); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	return appointments, nil
 }
 
 func (s appointmentServiceImpl) CreateAppointment(title string, description string, doctor_id string) (*model.Appointment, error) {
@@ -53,6 +112,12 @@ func (s appointmentServiceImpl) CreateAppointment(title string, description stri
 		return nil, err
 	}
 
+	if s.cache != nil {
+		if err := s.cache.CreateAppointment(appointment); err != nil {
+			log.Println(err.Error())
+		}
+	}
+
 	return appointment, nil
 }
 
@@ -77,12 +142,23 @@ func (s appointmentServiceImpl) UpdateStatus(id string, status model.Status) err
 		return errors.New("Done appointments cannot be updated")
 	}
 
-	return s.repo.UpdateStatus(id, status)
-}
+	err = s.repo.UpdateStatus(id, status)
 
-func NewAppointmentService(repo repository.AppointmentRepository, doctor_service DoctorService) AppointmentService {
-	return &appointmentServiceImpl{
-		repo:           repo,
-		doctor_service: doctor_service,
+	if err != nil {
+		return err
 	}
+
+	if s.cache != nil {
+		appointment, err = s.repo.FindByID(appointment.ID)
+
+		if err == nil {
+			if err := s.cache.UpdateAppointmentStatus(appointment); err != nil {
+				log.Println(err.Error())
+			}
+		} else {
+			log.Println(err.Error())
+		}
+	}
+
+	return nil
 }
